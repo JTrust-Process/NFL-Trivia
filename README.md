@@ -1,5 +1,10 @@
 # 🏈 NFL Trivia ML Project
 
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
+[![pandas](https://img.shields.io/badge/pandas-2.x-brightgreen.svg)](https://pandas.pydata.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Made with VS Code](https://img.shields.io/badge/Made%20with-VS%20Code-blue.svg)](https://code.visualstudio.com/)
+
 A personal project to explore **Python, pandas, and simple ML/AI concepts** by building an adaptive NFL trivia game.  
 The app will track user answers and adjust question difficulty based on correctness and response time.
 

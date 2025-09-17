@@ -1,0 +1,5 @@
+### Install dependencies
+Make sure you’re in the project folder, then run:
+
+```bash
+pip install -r requirements.txt
