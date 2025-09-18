@@ -1,0 +1,6 @@
+n,question_id,question,answer,user_answer,category,difficulty,is_correct,response_time,mu_after,mode,ts
+1,1,Who won Super Bowl I?,Green Bay Packers,,Super Bowl,1.0,0,7.527128591620342,-0.053788284273999024,simulate,2025-09-18T00:12:13Z
+2,5,Which team has the most Super Bowl appearances?,New England Patriots,,Super Bowl,3.0,0,11.58961407397692,-0.058183451455037644,simulate,2025-09-18T00:12:13Z
+3,3,Which team drafted Peyton Manning in 1998?,Indianapolis Colts,,Draft,2.0,0,7.8832503184606875,-0.08082907086546183,simulate,2025-09-18T00:12:13Z
+4,2,Which quarterback has the most career passing yards?,Tom Brady,,Records,3.0,0,6.490225441454268,-0.08961007087236131,simulate,2025-09-18T00:12:13Z
+5,4,"Which wide receiver was nicknamed ""Megatron""?",Calvin Johnson,,Players,2.0,0,8.17753718942154,-0.11086399548629822,simulate,2025-09-18T00:12:13Z
