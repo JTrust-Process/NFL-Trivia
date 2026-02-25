@@ -1,0 +1,16 @@
+n,question_id,question,answer,user_answer,category,difficulty,is_correct,response_time,mu_after,mode,ts
+1,31,What team does Joe Burrow play for?,Cincinnati Bengals,Bengals,Players,1.0,1,4.16,0.1828,play,2026-02-25T23:43:37Z
+2,34,Which team plays home games at Lambeau Field?,Green Bay Packers,Green Bay Packers,Stadiums,1.0,1,6.3,0.3562,play,2026-02-25T23:43:44Z
+3,7,What city do the Bears call home?,Chicago,Chicago,Teams,1.0,1,6.34,0.5201,play,2026-02-25T23:43:50Z
+4,1,Who won Super Bowl I?,Green Bay Packers,Green Bay Packers,Super Bowl,1.0,1,8.39,0.6648,play,2026-02-25T23:43:58Z
+5,37,How many players are on the field per team during a play?,11,11,General,1.0,1,1.5,0.8106,play,2026-02-25T23:44:00Z
+6,9,What does NFL stand for?,National Football League,National Football League,General,1.0,1,7.25,0.9474,play,2026-02-25T23:44:07Z
+7,10,Which player is known as the GOAT of NFL quarterbacks?,Tom Brady,Tom Brady,Players,1.0,1,4.84,1.0756,play,2026-02-25T23:44:12Z
+8,24,How many points is a touchdown worth?,6,6,General,1.0,1,2.38,1.1959,play,2026-02-25T23:44:14Z
+9,20,What team does Patrick Mahomes play for?,Kansas City Chiefs,Kansas City Chiefs,Players,1.0,1,9.33,1.2863,play,2026-02-25T23:44:24Z
+10,27,Which team drafted Aaron Rodgers?,Green Bay Packers,Green Bay Packers,Draft,2.0,1,5.69,1.4541,play,2026-02-25T23:44:29Z
+11,8,Which coach has the most Super Bowl wins?,Bill Belichick,Bull Belichick,Coaches,2.0,0,6.69,1.3624,play,2026-02-25T23:44:36Z
+12,13,Which team is known as America's Team?,Dallas Cowboys,Dallas Cowboys,Teams,2.0,1,6.61,1.526,play,2026-02-25T23:44:43Z
+13,3,Which team drafted Peyton Manning in 1998?,Indianapolis Colts,Indianapolis Colts,Draft,2.0,1,12.56,1.598,play,2026-02-25T23:44:55Z
+14,18,Which team won Super Bowl LVI?,Los Angeles Rams,Los Angeles Rams,Super Bowl,2.0,1,19.36,1.6206,play,2026-02-25T23:45:14Z
+15,32,Which defensive back was known as Primetime?,Deion Sanders,Deion Sanders,Players,2.0,1,12.67,1.6887,play,2026-02-25T23:45:27Z
