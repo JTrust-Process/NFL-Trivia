@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard — NFL Trivia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060a0f; --surface:#0d1520; --card:#111c2a; --border:#1e3048;
+    --gold:#f5c518; --text:#e8edf2; --muted:#5a7289; --accent:#3b82f6;
+    --green:#22c55e; --red:#e53e3e;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif; min-height: 100vh;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+    pointer-events:none; z-index:9999;
+  }
+  .wrapper { max-width: 800px; margin: 0 auto; padding: 0 16px 60px; }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 20px 0 16px; border-bottom: 2px solid var(--gold); margin-bottom: 32px;
+  }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:2.4rem; letter-spacing:3px; color:var(--gold); line-height:1; }
+  .logo span { color:var(--text); font-size:1rem; display:block; letter-spacing:6px; }
+  nav a { color:var(--muted); text-decoration:none; font-size:.85rem; letter-spacing:1px; text-transform:uppercase; }
+  nav a:hover { color:var(--gold); }
+
+  h1 {
+    font-family:'Bebas Neue',sans-serif; font-size:3rem; letter-spacing:4px;
+    color:var(--gold); margin-bottom: 28px;
+    text-shadow: 0 0 40px rgba(245,197,24,.2);
+  }
+
+  .lb-table { width:100%; border-collapse:collapse; }
+  .lb-table thead tr {
+    border-bottom: 2px solid var(--gold);
+  }
+  .lb-table th {
+    font-size:.7rem; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); padding: 10px 16px; text-align:left; font-weight:600;
+  }
+  .lb-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+  }
+  .lb-table tbody tr:hover { background: rgba(245,197,24,.03); }
+  .lb-table td { padding: 14px 16px; font-size: 1.05rem; }
+
+  .rank {
+    font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--muted);
+    width: 48px;
+  }
+  tr:nth-child(1) .rank { color:#ffd700; }
+  tr:nth-child(2) .rank { color:#c0c0c0; }
+  tr:nth-child(3) .rank { color:#cd7f32; }
+
+  .medal { display: inline-block; margin-right:6px; }
+
+  .score-val { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--gold); }
+  .acc-val   { color: var(--green); font-weight:600; }
+  .mode-tag {
+    font-size:.7rem; letter-spacing:1px; text-transform:uppercase;
+    padding:2px 8px; border-radius:3px;
+    background:rgba(59,130,246,.1); color:var(--accent); border:1px solid rgba(59,130,246,.2);
+  }
+
+  .empty {
+    text-align:center; padding: 60px 20px;
+    color:var(--muted); font-size:1.1rem; letter-spacing:1px;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="logo">NFL Trivia<span>Adaptive Edition</span></div>
+    <nav><a href="/">← Back to Game</a></nav>
+  </header>
+
+  <h1>🏆 Leaderboard</h1>
+
+  {% if board %}
+  <table class="lb-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th>Score (μ)</th>
+        <th>Accuracy</th>
+        <th>Rounds</th>
+        <th>Streak</th>
+        <th>Mode</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in board %}
+      <tr>
+        <td class="rank">
+          {% if loop.index == 1 %}🥇
+          {% elif loop.index == 2 %}🥈
+          {% elif loop.index == 3 %}🥉
+          {% else %}{{ loop.index }}
+          {% endif %}
+        </td>
+        <td><strong>{{ entry.name }}</strong></td>
+        <td><span class="score-val">{{ "%.2f"|format(entry.score) }}</span></td>
+        <td><span class="acc-val">{{ entry.accuracy }}%</span></td>
+        <td>{{ entry.rounds }}</td>
+        <td>🔥 {{ entry.best_streak }}</td>
+        <td><span class="mode-tag">{{ entry.mode }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No scores yet — play a game to appear here!</div>
+  {% endif %}
+</div>
+</body>
+</html>

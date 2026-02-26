@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFL Trivia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #060a0f;
+    --surface:  #0d1520;
+    --card:     #111c2a;
+    --border:   #1e3048;
+    --gold:     #f5c518;
+    --gold-dim: #8a6d0a;
+    --green:    #1a7a4a;
+    --green-bright: #22c55e;
+    --red:      #e53e3e;
+    --text:     #e8edf2;
+    --muted:    #5a7289;
+    --accent:   #3b82f6;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* scanline overlay for stadium screen feel */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── Field hash-mark background ── */
+  .field-bg {
+    position: fixed; inset: 0;
+    background:
+      linear-gradient(rgba(6,10,15,.96), rgba(6,10,15,.96)),
+      repeating-linear-gradient(90deg, transparent, transparent 79px, rgba(255,255,255,.02) 79px, rgba(255,255,255,.02) 80px),
+      repeating-linear-gradient(0deg,  transparent, transparent 79px, rgba(255,255,255,.02) 79px, rgba(255,255,255,.02) 80px);
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 0 16px 60px; }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0 16px;
+    border-bottom: 2px solid var(--gold);
+    margin-bottom: 28px;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.6rem;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(245,197,24,.3);
+    line-height: 1;
+  }
+  .logo span { color: var(--text); font-size: 1.1rem; display: block; letter-spacing: 6px; margin-top: -4px; }
+  nav a {
+    color: var(--muted); text-decoration: none; font-size: .85rem;
+    letter-spacing: 1px; text-transform: uppercase; margin-left: 20px;
+    transition: color .2s;
+  }
+  nav a:hover { color: var(--gold); }
+
+  /* ── Screen system ── */
+  .screen { display: none; animation: fadeIn .3s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+  /* ── Setup screen ── */
+  .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .setup-grid.full { grid-template-columns: 1fr; }
+
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: .75rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+
+  input[type=text], input[type=number], select {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1rem;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color .2s;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+
+  .toggle-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .toggle-btn {
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--muted); padding: 8px 18px; cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif; font-size: .9rem;
+    letter-spacing: 1px; text-transform: uppercase; border-radius: 4px;
+    transition: all .2s; user-select: none;
+  }
+  .toggle-btn.on { background: var(--gold); color: #000; border-color: var(--gold); font-weight: 700; }
+
+  .p2-section { display: none; }
+  .p2-section.show { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── Primary button ── */
+  .btn-primary {
+    background: var(--gold); color: #000;
+    border: none; padding: 14px 32px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem; letter-spacing: 3px;
+    cursor: pointer; border-radius: 4px;
+    transition: all .2s; width: 100%; margin-top: 20px;
+  }
+  .btn-primary:hover { background: #ffe45e; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(245,197,24,.3); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border); padding: 10px 20px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: .9rem; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; border-radius: 4px; transition: all .2s;
+  }
+  .btn-secondary:hover { border-color: var(--muted); color: var(--text); }
+
+  /* ── Scoreboard bar ── */
+  .scoreboard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--gold);
+    border-radius: 6px;
+    padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+  .score-block { text-align: center; }
+  .score-label { font-size: .65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .score-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem; line-height: 1.1; color: var(--gold);
+  }
+  .score-val.blue { color: var(--accent); }
+  .score-divider { width: 1px; background: var(--border); align-self: stretch; }
+
+  /* ── Progress bar ── */
+  .progress-track {
+    height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 20px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: var(--gold); border-radius: 2px;
+    transition: width .4s ease;
+  }
+
+  /* ── Question card ── */
+  .q-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px 28px 22px;
+    margin-bottom: 16px;
+  }
+  .q-meta {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .q-badge {
+    font-size: .7rem; letter-spacing: 2px; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 3px; font-weight: 700;
+  }
+  .badge-cat  { background: rgba(59,130,246,.15); color: var(--accent); border: 1px solid rgba(59,130,246,.3); }
+  .badge-diff { border: 1px solid; }
+  .diff-1 { color: #22c55e; border-color: rgba(34,197,94,.3); background: rgba(34,197,94,.08); }
+  .diff-2 { color: #84cc16; border-color: rgba(132,204,22,.3); background: rgba(132,204,22,.08); }
+  .diff-3 { color: #f59e0b; border-color: rgba(245,158,11,.3); background: rgba(245,158,11,.08); }
+  .diff-4 { color: #f97316; border-color: rgba(249,115,22,.3); background: rgba(249,115,22,.08); }
+  .diff-5 { color: #ef4444; border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.08); }
+
+  .q-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.55rem; font-weight: 600; line-height: 1.35;
+    color: var(--text);
+  }
+
+  /* ── Timer ── */
+  .timer-ring { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; }
+  .timer-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.4rem; color: var(--gold);
+    transition: color .3s;
+  }
+  .timer-val.warning { color: var(--red); animation: pulse .5s infinite alternate; }
+  @keyframes pulse { from { opacity:1; } to { opacity:.5; } }
+
+  /* ── Free answer ── */
+  .answer-row { display: flex; gap: 8px; margin-top: 16px; }
+  .answer-row input {
+    flex: 1;
+    font-size: 1.1rem;
+    padding: 12px 16px;
+  }
+  .btn-submit {
+    background: var(--gold); color: #000; border: none;
+    padding: 12px 24px; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem; letter-spacing: 2px; cursor: pointer;
+    border-radius: 4px; transition: all .2s; white-space: nowrap;
+  }
+  .btn-submit:hover { background: #ffe45e; }
+  .btn-submit:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Multiple choice ── */
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .choice-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 14px 16px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 1.05rem;
+    cursor: pointer; border-radius: 6px; text-align: left;
+    transition: all .15s; display: flex; align-items: center; gap: 10px;
+  }
+  .choice-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(245,197,24,.06); }
+  .choice-btn.correct { border-color: var(--green-bright); background: rgba(34,197,94,.1); color: var(--green-bright); }
+  .choice-btn.wrong   { border-color: var(--red); background: rgba(229,62,62,.1); color: var(--red); }
+  .choice-letter {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem;
+    color: var(--gold); min-width: 20px;
+  }
+
+  /* ── Feedback banner ── */
+  .feedback-banner {
+    padding: 14px 20px; border-radius: 6px; margin-top: 14px;
+    font-size: 1.1rem; font-weight: 600; display: none;
+    animation: slideIn .25s ease;
+  }
+  .feedback-banner.show { display: flex; align-items: center; gap: 12px; }
+  .feedback-banner.correct { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); color: var(--green-bright); }
+  .feedback-banner.wrong   { background: rgba(229,62,62,.12); border: 1px solid rgba(229,62,62,.3); color: #fc8181; }
+  @keyframes slideIn { from { opacity:0; transform: translateX(-8px); } to { opacity:1; transform:none; } }
+
+  .streak-banner {
+    text-align: center; padding: 8px;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem;
+    color: var(--gold); letter-spacing: 3px;
+    min-height: 36px; margin-bottom: 4px;
+    text-shadow: 0 0 20px rgba(245,197,24,.5);
+  }
+
+  /* ── Hint ── */
+  .hint-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .btn-hint {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--muted); padding: 7px 16px;
+    font-family: 'Barlow Condensed', sans-serif; font-size: .85rem;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; border-radius: 4px; transition: all .2s;
+  }
+  .btn-hint:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .hint-text { font-size: .9rem; color: var(--gold-dim); font-style: italic; }
+
+  /* ── Next button ── */
+  .btn-next {
+    background: var(--green); color: #fff; border: none;
+    padding: 12px 28px; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem; letter-spacing: 2px;
+    cursor: pointer; border-radius: 4px; transition: all .2s;
+    display: none; margin-top: 14px; width: 100%;
+  }
+  .btn-next.show { display: block; }
+  .btn-next:hover { background: #1e9658; }
+
+  /* ── Mu delta display ── */
+  .mu-delta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: .85rem; text-align: right; margin-top: 6px; min-height: 20px;
+  }
+  .mu-delta.up   { color: var(--green-bright); }
+  .mu-delta.down { color: var(--red); }
+
+  /* ── Results screen ── */
+  .result-hero {
+    text-align: center; padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border); margin-bottom: 28px;
+  }
+  .result-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem; letter-spacing: 4px;
+    color: var(--gold); line-height: 1;
+  }
+  .result-sub { color: var(--muted); font-size: 1rem; letter-spacing: 2px; text-transform: uppercase; margin-top: 8px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+  .stat-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px 12px; text-align: center;
+  }
+  .stat-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem; color: var(--gold); line-height: 1;
+  }
+  .stat-label { font-size: .65rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+
+  .cat-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .cat-table th {
+    font-size: .7rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); text-align: left; padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cat-table td { padding: 10px 12px; border-bottom: 1px solid rgba(30,48,72,.5); font-size: .95rem; }
+  .cat-bar-wrap { background: var(--border); border-radius: 2px; height: 6px; margin-top: 4px; overflow: hidden; }
+  .cat-bar      { height: 100%; border-radius: 2px; background: var(--gold); transition: width .6s ease; }
+
+  .ml-badge {
+    display: inline-block; padding: 4px 12px;
+    background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3);
+    color: var(--accent); font-size: .75rem; letter-spacing: 1px;
+    border-radius: 3px; margin-bottom: 16px;
+  }
+
+  .lb-mini { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 24px; }
+  .lb-mini-head {
+    padding: 10px 16px; background: var(--surface);
+    font-size: .7rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    display: grid; grid-template-columns: 32px 1fr 80px 60px; gap: 8px;
+  }
+  .lb-mini-row {
+    padding: 10px 16px; border-top: 1px solid var(--border);
+    display: grid; grid-template-columns: 32px 1fr 80px 60px; gap: 8px;
+    font-size: .95rem; align-items: center;
+  }
+  .lb-mini-row:nth-child(2) .lb-rank { color: #ffd700; }
+  .lb-mini-row:nth-child(3) .lb-rank { color: #c0c0c0; }
+  .lb-mini-row:nth-child(4) .lb-rank { color: #cd7f32; }
+  .lb-rank { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--muted); }
+
+  .play-again-row { display: flex; gap: 10px; }
+  .play-again-row .btn-primary { margin-top: 0; }
+
+  /* ── Admin scrape section ── */
+  .scrape-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px 20px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .scrape-box p { font-size: .9rem; color: var(--muted); }
+  .scrape-result { font-size: .85rem; color: var(--green-bright); margin-top: 4px; }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem; letter-spacing: 3px; color: var(--muted);
+    text-transform: uppercase; margin-bottom: 12px; margin-top: 28px;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 540px) {
+    .setup-grid { grid-template-columns: 1fr; }
+    .p2-section.show { grid-template-columns: 1fr; }
+    .choices { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .logo { font-size: 2rem; }
+    .score-val { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="field-bg"></div>
+<div class="wrapper">
+
+  <header>
+    <div class="logo">NFL Trivia<span>Adaptive Edition</span></div>
+    <nav>
+      <a href="/leaderboard">🏆 Leaderboard</a>
+    </nav>
+  </header>
+
+  <!-- ── SETUP SCREEN ── -->
+  <div id="screen-setup" class="screen active">
+    <div class="section-title">New Game</div>
+
+    <div class="setup-grid">
+      <div class="field-group">
+        <label>Your Name</label>
+        <input type="text" id="player-name" value="Player 1" maxlength="20">
+      </div>
+      <div class="field-group">
+        <label>Rounds</label>
+        <select id="rounds-select">
+          <option value="10">10 Questions</option>
+          <option value="15" selected>15 Questions</option>
+          <option value="20">20 Questions</option>
+          <option value="30">30 Questions</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:20px">Game Options</div>
+
+    <div class="field-group" style="margin-bottom:12px">
+      <label>Answer Mode</label>
+      <div class="toggle-row">
+        <div class="toggle-btn on" data-group="mode" data-val="free">Free Answer</div>
+        <div class="toggle-btn" data-group="mode" data-val="multiple_choice">Multiple Choice</div>
+      </div>
+    </div>
+
+    <div class="field-group" style="margin-bottom:12px">
+      <label>Timed Mode</label>
+      <div class="toggle-row">
+        <div class="toggle-btn on" data-group="timed" data-val="false">Off</div>
+        <div class="toggle-btn" data-group="timed" data-val="true">15s Countdown</div>
+      </div>
+    </div>
+
+    <div class="field-group" style="margin-bottom:12px">
+      <label>Multiplayer</label>
+      <div class="toggle-row">
+        <div class="toggle-btn on" data-group="mp" data-val="false">Solo</div>
+        <div class="toggle-btn" data-group="mp" data-val="true">2 Players</div>
+      </div>
+    </div>
+
+    <div class="p2-section" id="p2-section">
+      <div class="field-group">
+        <label>Player 2 Name</label>
+        <input type="text" id="player2-name" value="Player 2" maxlength="20">
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btn-start">KICK OFF</button>
+
+    <div class="section-title">Update Questions</div>
+    <div class="scrape-box">
+      <div>
+        <div style="font-size:1rem; font-weight:600;">Scrape from Pro Football Reference</div>
+        <p>Pull new TD record questions automatically from the web.</p>
+        <div class="scrape-result" id="scrape-result"></div>
+      </div>
+      <button class="btn-secondary" id="btn-scrape">Scrape Now</button>
+    </div>
+  </div>
+
+  <!-- ── GAME SCREEN ── -->
+  <div id="screen-game" class="screen">
+
+    <!-- Scoreboard -->
+    <div class="scoreboard" id="scoreboard">
+      <div class="score-block">
+        <div class="score-label" id="p1-label">You</div>
+        <div class="score-val" id="p1-mu-display">0.00</div>
+        <div class="score-label">Skill μ</div>
+      </div>
+      <div class="score-divider"></div>
+      <div class="score-block">
+        <div class="score-label">Round</div>
+        <div class="score-val" id="round-display">1</div>
+        <div class="score-label" id="round-total">of 15</div>
+      </div>
+      <div class="score-divider"></div>
+      <div class="score-block">
+        <div class="score-label">Streak</div>
+        <div class="score-val" id="streak-display">0</div>
+        <div class="score-label">🔥</div>
+      </div>
+      <div id="p2-score-block" class="score-block" style="display:none">
+        <div class="score-divider"></div>
+        <div class="score-label" id="p2-label">P2</div>
+        <div class="score-val blue" id="p2-mu-display">0.00</div>
+        <div class="score-label">Skill μ</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+    <!-- Active player banner (multiplayer) -->
+    <div id="turn-banner" style="display:none; text-align:center; margin-bottom:12px; font-size:1rem; letter-spacing:2px; text-transform:uppercase; color:var(--gold)"></div>
+
+    <!-- Timer -->
+    <div class="timer-ring" id="timer-row" style="display:none">
+      <div class="timer-val" id="timer-val">15</div>
+      <div style="font-size:.8rem; letter-spacing:2px; color:var(--muted)">SECONDS</div>
+    </div>
+
+    <!-- Question card -->
+    <div class="q-card">
+      <div class="q-meta">
+        <span class="q-badge badge-cat" id="q-category">—</span>
+        <span class="q-badge badge-diff" id="q-diff-badge">—</span>
+      </div>
+      <div class="q-text" id="q-text">Loading...</div>
+    </div>
+
+    <!-- Hint -->
+    <div class="hint-row">
+      <button class="btn-hint" id="btn-hint">💡 Use Hint (−0.15 μ)</button>
+      <span class="hint-text" id="hint-text"></span>
+    </div>
+
+    <!-- Free answer -->
+    <div id="free-answer-section">
+      <div class="answer-row">
+        <input type="text" id="answer-input" placeholder="Type your answer…" autocomplete="off">
+        <button class="btn-submit" id="btn-submit">Submit</button>
+      </div>
+    </div>
+
+    <!-- Multiple choice -->
+    <div id="mc-section" style="display:none">
+      <div class="choices" id="choices-container"></div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="streak-banner" id="streak-banner"></div>
+    <div class="feedback-banner" id="feedback-banner"></div>
+    <div class="mu-delta" id="mu-delta"></div>
+    <button class="btn-next" id="btn-next">NEXT QUESTION →</button>
+  </div>
+
+  <!-- ── RESULTS SCREEN ── -->
+  <div id="screen-results" class="screen">
+    <div class="result-hero">
+      <div class="result-title" id="result-title">Game Over</div>
+      <div class="result-sub" id="result-sub">Session Complete</div>
+    </div>
+
+    <div id="ml-badge-wrap"></div>
+
+    <div class="stats-grid" id="stats-grid"></div>
+
+    <div class="section-title">By Category</div>
+    <table class="cat-table">
+      <thead><tr><th>Category</th><th>Correct</th><th>Total</th><th>Rate</th></tr></thead>
+      <tbody id="cat-tbody"></tbody>
+    </table>
+
+    <div class="section-title">Top 10 Leaderboard</div>
+    <div class="lb-mini" id="lb-mini"></div>
+
+    <div class="play-again-row">
+      <button class="btn-primary" id="btn-play-again">PLAY AGAIN</button>
+      <a href="/leaderboard"><button class="btn-secondary">Full Leaderboard</button></a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  mode: 'free',
+  timed: false,
+  mp: false,
+  currentQ: null,
+  answered: false,
+  timerInterval: null,
+  timeLeft: 15,
+};
+
+// ── Toggle buttons ──────────────────────────────────────────────────────────
+document.querySelectorAll('.toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const group = btn.dataset.group;
+    document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+
+    if (group === 'mode')  state.mode  = btn.dataset.val;
+    if (group === 'timed') state.timed = btn.dataset.val === 'true';
+    if (group === 'mp') {
+      state.mp = btn.dataset.val === 'true';
+      document.getElementById('p2-section').classList.toggle('show', state.mp);
+    }
+  });
+});
+
+// ── Start game ─────────────────────────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click', async () => {
+  const name     = document.getElementById('player-name').value.trim() || 'Player 1';
+  const rounds   = parseInt(document.getElementById('rounds-select').value);
+  const p2name   = document.getElementById('player2-name').value.trim() || 'Player 2';
+
+  const res = await fetch('/api/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      mode: state.mode, timed: state.timed, rounds,
+      multiplayer: state.mp, player_name: name, player2_name: p2name
+    })
+  });
+  if (!res.ok) return;
+
+  document.getElementById('p1-label').textContent = name;
+  document.getElementById('p2-label').textContent = p2name;
+  document.getElementById('round-total').textContent = `of ${rounds}`;
+
+  const mpBlock = document.getElementById('p2-score-block');
+  mpBlock.style.display = state.mp ? 'block' : 'none';
+
+  showScreen('game');
+  loadQuestion();
+});
+
+// ── Load question ──────────────────────────────────────────────────────────
+async function loadQuestion() {
+  clearTimer();
+  state.answered = false;
+
+  // Reset UI
+  document.getElementById('feedback-banner').className = 'feedback-banner';
+  document.getElementById('streak-banner').textContent = '';
+  document.getElementById('mu-delta').textContent = '';
+  document.getElementById('hint-text').textContent = '';
+  document.getElementById('answer-input').value = '';
+  document.getElementById('btn-next').classList.remove('show');
+  document.getElementById('btn-hint').disabled = false;
+  document.getElementById('btn-submit').disabled = false;
+  document.getElementById('answer-input').disabled = false;
+  document.querySelectorAll('.choice-btn').forEach(b => { b.disabled = false; b.className = 'choice-btn'; });
+
+  const res = await fetch('/api/question');
+  const data = await res.json();
+
+  if (data.game_over) { await showResults(); return; }
+
+  state.currentQ = data;
+
+  // Scoreboard
+  document.getElementById('p1-mu-display').textContent = data.p1_mu.toFixed(2);
+  document.getElementById('streak-display').textContent = data.p1_streak;
+  document.getElementById('round-display').textContent = data.round;
+  if (state.mp && data.p2_mu !== null) {
+    document.getElementById('p2-mu-display').textContent = data.p2_mu.toFixed(2);
+  }
+
+  // Progress
+  const pct = ((data.round - 1) / data.rounds) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  // Turn banner (multiplayer)
+  const turnBanner = document.getElementById('turn-banner');
+  if (state.mp) {
+    turnBanner.style.display = 'block';
+    turnBanner.textContent = `📍 ${data.active_name}'s Turn`;
+  } else {
+    turnBanner.style.display = 'none';
+  }
+
+  // Question card
+  document.getElementById('q-category').textContent = data.category;
+  document.getElementById('q-text').textContent = data.question;
+
+  const diffBadge = document.getElementById('q-diff-badge');
+  const diffLabels = {1:'Easy',2:'Medium',3:'Hard',4:'Expert',5:'Legend'};
+  const d = Math.round(data.difficulty);
+  diffBadge.textContent = diffLabels[d] || 'Hard';
+  diffBadge.className = `q-badge badge-diff diff-${d}`;
+
+  // Answer mode
+  const isMC = data.choices && data.choices.length > 0;
+  document.getElementById('free-answer-section').style.display = isMC ? 'none' : 'block';
+  document.getElementById('mc-section').style.display = isMC ? 'block' : 'none';
+
+  if (isMC) renderChoices(data.choices);
+  else setTimeout(() => document.getElementById('answer-input').focus(), 50);
+
+  // Timer
+  const timerRow = document.getElementById('timer-row');
+  if (data.timed) {
+    timerRow.style.display = 'flex';
+    startTimer(data.time_limit || 15);
+  } else {
+    timerRow.style.display = 'none';
+  }
+}
+
+// ── Choices (MC) ────────────────────────────────────────────────────────────
+function renderChoices(choices) {
+  const letters = ['A','B','C','D'];
+  const container = document.getElementById('choices-container');
+  container.innerHTML = '';
+  choices.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="choice-letter">${letters[i]}</span>${c}`;
+    btn.addEventListener('click', () => submitAnswer(c));
+    container.appendChild(btn);
+  });
+}
+
+// ── Submit answer ──────────────────────────────────────────────────────────
+document.getElementById('btn-submit').addEventListener('click', () => {
+  const val = document.getElementById('answer-input').value.trim();
+  if (!val) return;
+  submitAnswer(val);
+});
+
+document.getElementById('answer-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !state.answered) {
+    const val = document.getElementById('answer-input').value.trim();
+    if (val) submitAnswer(val);
+  }
+});
+
+async function submitAnswer(userAns, timedOut = false) {
+  if (state.answered) return;
+  state.answered = true;
+  clearTimer();
+
+  document.getElementById('btn-submit').disabled = true;
+  document.getElementById('answer-input').disabled = true;
+
+  const res = await fetch('/api/answer', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ answer: userAns, timed_out: timedOut })
+  });
+  const data = await res.json();
+
+  // Scoreboard update
+  document.getElementById('p1-mu-display').textContent = data.p1_mu.toFixed(2);
+  document.getElementById('streak-display').textContent = data.streak;
+  if (state.mp && data.p2_mu !== null) {
+    document.getElementById('p2-mu-display').textContent = data.p2_mu.toFixed(2);
+  }
+
+  // Feedback banner
+  const banner = document.getElementById('feedback-banner');
+  banner.textContent = (data.is_correct ? '✅  ' : '❌  ') + data.feedback;
+  banner.className = `feedback-banner show ${data.is_correct ? 'correct' : 'wrong'}`;
+
+  // mu delta
+  const delta = data.delta;
+  const deltaEl = document.getElementById('mu-delta');
+  deltaEl.textContent = `μ ${data.mu_before.toFixed(2)} → ${data.mu_after.toFixed(2)}  (${delta >= 0 ? '+' : ''}${delta.toFixed(3)})`;
+  deltaEl.className = `mu-delta ${delta >= 0 ? 'up' : 'down'}`;
+
+  // Streak banner
+  document.getElementById('streak-banner').textContent = data.streak_msg || '';
+
+  // MC highlight correct/wrong
+  if (state.currentQ?.choices) {
+    document.querySelectorAll('.choice-btn').forEach(btn => {
+      btn.disabled = true;
+      const txt = btn.textContent.slice(1).trim(); // remove letter prefix
+      if (txt === data.correct_answer) btn.classList.add('correct');
+      else if (txt === userAns && !data.is_correct) btn.classList.add('wrong');
+    });
+  }
+
+  if (data.game_over) {
+    document.getElementById('btn-next').textContent = 'VIEW RESULTS →';
+    document.getElementById('btn-next').classList.add('show');
+    document.getElementById('btn-next').onclick = showResults;
+  } else {
+    document.getElementById('btn-next').textContent = 'NEXT QUESTION →';
+    document.getElementById('btn-next').classList.add('show');
+    document.getElementById('btn-next').onclick = loadQuestion;
+  }
+}
+
+// ── Hint ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-hint').addEventListener('click', async () => {
+  document.getElementById('btn-hint').disabled = true;
+  const res = await fetch('/api/hint');
+  const data = await res.json();
+  document.getElementById('hint-text').textContent = data.hint
+    ? `💡 ${data.hint}  (−0.15 μ applied)`
+    : 'No hint available.';
+  document.getElementById('p1-mu-display').textContent =
+    (parseFloat(document.getElementById('p1-mu-display').textContent) - 0.15).toFixed(2);
+});
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+function startTimer(seconds) {
+  state.timeLeft = seconds;
+  const el = document.getElementById('timer-val');
+  el.textContent = seconds;
+  el.className = 'timer-val';
+
+  state.timerInterval = setInterval(() => {
+    state.timeLeft--;
+    el.textContent = state.timeLeft;
+    if (state.timeLeft <= 5) el.className = 'timer-val warning';
+    if (state.timeLeft <= 0) {
+      clearTimer();
+      submitAnswer('', true);
+    }
+  }, 1000);
+}
+
+function clearTimer() {
+  if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
+}
+
+// ── Results ────────────────────────────────────────────────────────────────
+async function showResults() {
+  clearTimer();
+  const res = await fetch('/api/results', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'
+  });
+  const data = await res.json();
+
+  // Title
+  document.getElementById('result-title').textContent =
+    state.mp ? `🏆 ${data.winner} Wins!` : 'Session Complete';
+  document.getElementById('result-sub').textContent =
+    `Final Skill μ: ${data.p1.mu.toFixed(2)}`;
+
+  // ML badge
+  const mlWrap = document.getElementById('ml-badge-wrap');
+  mlWrap.innerHTML = data.retrained
+    ? '<div class="ml-badge">🤖 ML model retrained — difficulty scores updated</div>'
+    : '';
+
+  // Stats grid
+  const sg = document.getElementById('stats-grid');
+  const p = data.p1;
+  sg.innerHTML = `
+    <div class="stat-box"><div class="stat-val">${p.mu.toFixed(2)}</div><div class="stat-label">Final μ</div></div>
+    <div class="stat-box"><div class="stat-val">${p.accuracy}%</div><div class="stat-label">Accuracy</div></div>
+    <div class="stat-box"><div class="stat-val">${p.best_streak}</div><div class="stat-label">Best Streak</div></div>
+    ${data.p2 ? `<div class="stat-box"><div class="stat-val" style="color:var(--accent)">${data.p2.mu.toFixed(2)}</div><div class="stat-label">${data.p2.name} μ</div></div>` : ''}
+  `;
+
+  // Category breakdown
+  const tbody = document.getElementById('cat-tbody');
+  tbody.innerHTML = Object.entries(data.categories)
+    .sort((a,b) => b[1].pct - a[1].pct)
+    .map(([cat, s]) => `
+      <tr>
+        <td>${cat}</td>
+        <td>${s.correct}</td>
+        <td>${s.total}</td>
+        <td>
+          ${s.pct}%
+          <div class="cat-bar-wrap"><div class="cat-bar" style="width:${s.pct}%"></div></div>
+        </td>
+      </tr>
+    `).join('');
+
+  // Mini leaderboard
+  const lb = document.getElementById('lb-mini');
+  lb.innerHTML = `
+    <div class="lb-mini-head"><span>#</span><span>Name</span><span>Score (μ)</span><span>Acc%</span></div>
+    ${data.leaderboard.map((e,i) => `
+      <div class="lb-mini-row">
+        <span class="lb-rank">${i+1}</span>
+        <span>${e.name}</span>
+        <span>${e.score.toFixed(2)}</span>
+        <span>${e.accuracy}%</span>
+      </div>
+    `).join('')}
+  `;
+
+  showScreen('results');
+}
+
+// ── Scrape ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-scrape').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-scrape');
+  btn.disabled = true; btn.textContent = 'Scraping…';
+  const res = await fetch('/api/scrape', { method: 'POST' });
+  const data = await res.json();
+  document.getElementById('scrape-result').textContent = data.message;
+  btn.disabled = false; btn.textContent = 'Scrape Now';
+});
+
+// ── Play again ─────────────────────────────────────────────────────────────
+document.getElementById('btn-play-again').addEventListener('click', () => showScreen('setup'));
+
+// ── Screen switcher ────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+}
+</script>
+</body>
+</html>
