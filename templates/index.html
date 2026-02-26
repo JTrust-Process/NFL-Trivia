@@ -382,7 +382,9 @@
   <header>
     <div class="logo">NFL Trivia<span>Adaptive Edition</span></div>
     <nav>
+      <a href="/profile">👤 {{ user.username }}</a>
       <a href="/leaderboard">🏆 Leaderboard</a>
+      <a href="/logout">Log out</a>
     </nav>
   </header>
 
@@ -391,10 +393,6 @@
     <div class="section-title">New Game</div>
 
     <div class="setup-grid">
-      <div class="field-group">
-        <label>Your Name</label>
-        <input type="text" id="player-name" value="Player 1" maxlength="20">
-      </div>
       <div class="field-group">
         <label>Rounds</label>
         <select id="rounds-select">
@@ -440,6 +438,20 @@
     </div>
 
     <button class="btn-primary" id="btn-start">KICK OFF</button>
+
+    {% if recent %}
+    <div class="section-title">Recent Games</div>
+    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px;">
+      {% for s in recent %}
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; font-size:.95rem; flex-wrap:wrap; gap:8px;">
+        <span style="color:var(--muted); font-size:.75rem; letter-spacing:1px; text-transform:uppercase;">{{ s.played_at.strftime('%b %d') }} · {{ s.mode }}</span>
+        <span>μ <strong style="color:var(--gold)">{{ "%.2f"|format(s.final_mu) }}</strong></span>
+        <span style="color:var(--green-bright)">{{ s.accuracy_pct }}% acc</span>
+        <span>🔥 {{ s.best_streak }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <div class="section-title">Update Questions</div>
     <div class="scrape-box">
@@ -587,7 +599,6 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
 
 // ── Start game ─────────────────────────────────────────────────────────────
 document.getElementById('btn-start').addEventListener('click', async () => {
-  const name     = document.getElementById('player-name').value.trim() || 'Player 1';
   const rounds   = parseInt(document.getElementById('rounds-select').value);
   const p2name   = document.getElementById('player2-name').value.trim() || 'Player 2';
 
@@ -596,12 +607,13 @@ document.getElementById('btn-start').addEventListener('click', async () => {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       mode: state.mode, timed: state.timed, rounds,
-      multiplayer: state.mp, player_name: name, player2_name: p2name
+      multiplayer: state.mp, player2_name: p2name
     })
   });
   if (!res.ok) return;
+  const startData = await res.json();
 
-  document.getElementById('p1-label').textContent = name;
+  document.getElementById('p1-label').textContent = startData.p1_name || 'You';
   document.getElementById('p2-label').textContent = p2name;
   document.getElementById('round-total').textContent = `of ${rounds}`;
 
@@ -850,16 +862,6 @@ async function showResults() {
       </tr>
     `).join('');
 
-   // ── Refresh questions ───────────────────────────────────────────────────────
-  document.getElementById('btn-scrape').addEventListener('click', async () => {
-    const btn = document.getElementById('btn-scrape');
-    btn.disabled = true; btn.textContent = 'Fetching…';
-    const res = await fetch('/api/refresh-questions', { method: 'POST' });
-    const data = await res.json();
-    document.getElementById('scrape-result').textContent = data.message;
-    btn.disabled = false; btn.textContent = 'Refresh Now';
-  });
-
   // Mini leaderboard
   const lb = document.getElementById('lb-mini');
   lb.innerHTML = `
@@ -867,8 +869,8 @@ async function showResults() {
     ${data.leaderboard.map((e,i) => `
       <div class="lb-mini-row">
         <span class="lb-rank">${i+1}</span>
-        <span>${e.name}</span>
-        <span>${e.score.toFixed(2)}</span>
+        <span>${e.username}</span>
+        <span>${e.best_mu.toFixed(2)}</span>
         <span>${e.accuracy}%</span>
       </div>
     `).join('')}
@@ -885,6 +887,16 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(`screen-${name}`).classList.add('active');
 }
+
+// ── Refresh questions ───────────────────────────────────────────────────
+document.getElementById('btn-scrape').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-scrape');
+  btn.disabled = true; btn.textContent = 'Fetching…';
+  const res = await fetch('/api/refresh-questions', { method: 'POST' });
+  const data = await res.json();
+  document.getElementById('scrape-result').textContent = data.message;
+  btn.disabled = false; btn.textContent = 'Refresh Now';
+});
 </script>
 </body>
 </html>

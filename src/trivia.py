@@ -73,20 +73,35 @@ def choose_next(state, pool, asked_ids):
     candidates = [q for q in pool if q.id not in asked_ids]
     if not candidates:
         return None
+
+    # Widen band until we have enough candidates
     band = 1.5
     while band <= 10:
         in_band = [q for q in candidates if abs(q.difficulty - state.mu) <= band]
-        if len(in_band) >= 3:
+        if len(in_band) >= 5:
             break
         band += 0.5
     if not in_band:
         in_band = candidates
 
+    # Score each question — lower diff distance + category variety bonus
     def score(q):
-        return -abs(q.difficulty - state.mu) + 0.3 / (1 + state.category_counts[q.category]) + random.uniform(0, 0.15)
+        diff_penalty = abs(q.difficulty - state.mu)
+        variety_bonus = 0.4 / (1 + state.category_counts[q.category])
+        return max(0.01, 1.0 / (1 + diff_penalty) + variety_bonus)
 
-    in_band.sort(key=score, reverse=True)
-    return in_band[0]
+    scores = [score(q) for q in in_band]
+
+    # Weighted random pick from top 6 candidates — prevents always picking the same question
+    top_n = min(6, len(in_band))
+    paired = sorted(zip(scores, in_band), reverse=True)[:top_n]
+    top_scores = [s for s, _ in paired]
+    top_qs     = [q for _, q in paired]
+
+    # Softmax-style weights so better-scoring questions are still preferred but not guaranteed
+    total = sum(top_scores)
+    weights = [s / total for s in top_scores]
+    return random.choices(top_qs, weights=weights, k=1)[0]
 
 
 def generate_choices(correct, pool, n_wrong=3):
@@ -127,10 +142,40 @@ def normalize_answer(s):
 def check_answer(user_ans, correct_ans):
     u = normalize_answer(user_ans)
     c = normalize_answer(correct_ans)
+
+    # Exact match
     if u == c:
         return True, "Correct!"
-    if u and (u in c or c in u):
+
+    if not u:
+        return False, f"Wrong. The answer was: {correct_ans}"
+
+    u_words = set(u.split())
+    c_words = set(c.split())
+
+    # Words that are too generic to count as a match on their own
+    # (city names, directions, common words that appear in many team names)
+    _generic = {"new", "los", "san", "city", "bay", "north", "south", "east",
+                "west", "york", "england", "angeles", "francisco", "kansas",
+                "green", "tampa", "carolina", "dallas", "denver", "miami",
+                "atlanta", "detroit", "houston", "indiana", "chicago"}
+
+    # Single distinctive word match (4+ chars, not a generic location word)
+    distinctive_c = {w for w in c_words if len(w) >= 4 and w not in _generic}
+    if u_words & distinctive_c:
         return True, "Close enough — accepted!"
+
+    # Multi-word input: 2+ matching words OR majority of answer words matched
+    if len(u_words) >= 2:
+        overlap = len(u_words & c_words)
+        if overlap >= 2 or (len(c_words) > 0 and overlap / len(c_words) >= 0.5):
+            return True, "Close enough — accepted!"
+
+    # Substring fallback — input must be substantial (5+ chars, half the answer length)
+    if len(u) >= 5 and len(u) >= len(c) * 0.5:
+        if u in c or c in u:
+            return True, "Close enough — accepted!"
+
     return False, f"Wrong. The answer was: {correct_ans}"
 
 

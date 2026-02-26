@@ -81,10 +81,7 @@
 <div class="wrapper">
   <header>
     <div class="logo">NFL Trivia<span>Adaptive Edition</span></div>
-    <nav>
-      <a href="/">🏠 Home</a>
-      <a href="/">← Back to Game</a>
-    </nav>
+    <nav><a href="/">← Back to Game</a></nav>
   </header>
 
   <h1>🏆 Leaderboard</h1>
@@ -95,11 +92,10 @@
       <tr>
         <th>#</th>
         <th>Player</th>
-        <th>Score (μ)</th>
-        <th>Accuracy</th>
-        <th>Rounds</th>
-        <th>Streak</th>
-        <th>Mode</th>
+        <th>Best Score (μ)</th>
+        <th>Avg Accuracy</th>
+        <th>Games</th>
+        <th>Best Streak</th>
       </tr>
     </thead>
     <tbody>
@@ -112,12 +108,11 @@
           {% else %}{{ loop.index }}
           {% endif %}
         </td>
-        <td><strong>{{ entry.name }}</strong></td>
+        <td><strong>{{ entry.username }}</strong></td>
         <td><span class="score-val">{{ "%.2f"|format(entry.best_mu) }}</span></td>
-        <td><span class="acc-val">{{ entry.accuracy }}%</span></td>
-        <td>{{ entry.rounds }}</td>
+        <td><span class="acc-val">{{ entry.avg_accuracy }}%</span></td>
+        <td>{{ entry.games_played }}</td>
         <td>🔥 {{ entry.best_streak }}</td>
-        <td><span class="mode-tag">{{ entry.mode }}</span></td>
       </tr>
       {% endfor %}
     </tbody>

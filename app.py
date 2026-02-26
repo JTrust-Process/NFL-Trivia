@@ -172,7 +172,7 @@ def start_game():
         "p2_streak_multiplier": 1.0, "p2_cat_counts": {}, "p2_cat_correct": {},
         "active_player": 1,
     }
-    return jsonify({"status": "ok", "rounds": session["game"]["rounds"]})
+    return jsonify({"status": "ok", "rounds": session["game"]["rounds"], "p1_name": current_user.username})
 
 
 @app.route("/api/question", methods=["GET"])
@@ -311,7 +311,7 @@ def save_results():
             .join(GameSession, GameSession.user_id == User.id)
             .group_by(User.id, User.username)
             .order_by(db.desc("best_mu")).limit(10).all())
-    leaderboard = [{"name": r.username, "score": round(r.best_mu, 2),
+    leaderboard = [{"username": r.username, "best_mu": round(r.best_mu, 2),
                     "accuracy": round((r.avg_accuracy or 0) * 100, 1),
                     "best_streak": r.best_streak} for r in rows]
     cats = {}

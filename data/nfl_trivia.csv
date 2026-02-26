@@ -1,43 +1,44 @@
 id,question,answer,difficulty,category,hint
-1,Who won Super Bowl I?,Green Bay Packers,1,Super Bowl,They were coached by Vince Lombardi
-2,Which quarterback has the most career passing yards?,Tom Brady,3,Records,"He played for the Patriots, Buccaneers, and 49ers"
-3,Which team drafted Peyton Manning in 1998?,Indianapolis Colts,2,Draft,He went first overall that year
-4,Which wide receiver was nicknamed Megatron?,Calvin Johnson,2,Players,He played for the Detroit Lions
-5,Which team has the most Super Bowl appearances?,New England Patriots,3,Super Bowl,They've been to the Super Bowl 11 times
-6,Who was the first NFL player to rush for 2000 yards in a season?,O.J. Simpson,3,Records,He played for the Buffalo Bills in 1973
-7,What city do the Bears call home?,Chicago,1,Teams,Home of the Bears since 1971
-8,Which coach has the most Super Bowl wins?,Bill Belichick,2,Coaches,He won 6 Super Bowls with one team
-9,What does NFL stand for?,National Football League,1,General,Formed in 1920 as the APFA
-10,Which player is known as the GOAT of NFL quarterbacks?,Tom Brady,1,Players,He has 7 Super Bowl rings
-11,Who holds the record for most career receiving touchdowns?,Jerry Rice,3,Records,He played for the 49ers and Raiders
-12,In what year was the NFL founded?,1920,3,History,It was called the APFA at the time
-13,Which team is known as America's Team?,Dallas Cowboys,2,Teams,"They play in AT&T Stadium in Arlington, TX"
-14,Who threw the most touchdown passes in a single season?,Peyton Manning,3,Records,He threw 55 in 2013
-15,Which defensive player won the most Defensive Player of the Year awards?,Lawrence Taylor,4,Records,He was a linebacker for the New York Giants
-16,What is the name of the trophy awarded to the Super Bowl winner?,Vince Lombardi Trophy,2,General,Named after the legendary Green Bay Packers coach
-17,Who was the first overall pick in the 2023 NFL Draft?,Bryce Young,3,Draft,He played college ball at Alabama
-18,Which team won Super Bowl LVI?,Los Angeles Rams,2,Super Bowl,They beat the Cincinnati Bengals
-19,Who is the all-time leader in career rushing yards?,Emmitt Smith,3,Records,He played for the Dallas Cowboys
-20,What team does Patrick Mahomes play for?,Kansas City Chiefs,1,Players,He plays in Kansas City
-21,Which stadium is known as the loudest in the NFL?,Arrowhead Stadium,3,Stadiums,Home of the Kansas City Chiefs
-22,Who invented the West Coast Offense?,Bill Walsh,4,Coaches,He coached the San Francisco 49ers to multiple Super Bowls
-23,Which player was nicknamed The Bus?,Jerome Bettis,3,Players,He played for Pittsburgh and other teams
-24,How many points is a touchdown worth?,6,1,General,You can score 2 more with a conversion
-25,Which quarterback was known as The Rifleman?,Mark Rypien,5,Players,He played for Washington in the early 90s
-26,Who holds the record for most career interceptions?,Paul Krause,4,Records,He played for the Minnesota Vikings
-27,Which team drafted Aaron Rodgers?,Green Bay Packers,2,Draft,He was the 24th overall pick in 2005
-28,What year did the New Orleans Saints win their first Super Bowl?,2010,3,Super Bowl,They beat the Indianapolis Colts
-29,Which receiver caught the Helmet Catch in Super Bowl XLII?,David Tyree,4,Super Bowl,He was a wide receiver for the New York Giants
-30,Who was the head coach of the 1985 Chicago Bears?,Mike Ditka,3,Coaches,He was a famous Bears tight end before coaching
-31,What team does Joe Burrow play for?,Cincinnati Bengals,1,Players,He was the first overall pick in 2020
-32,Which defensive back was known as Primetime?,Deion Sanders,2,Players,He was known for his speed and shutdown coverage
-33,Who threw the longest pass in NFL history at 99 yards?,Frank Filchock,5,Records,It happened in a 1939 NFL game
-34,Which team plays home games at Lambeau Field?,Green Bay Packers,1,Stadiums,"Located in Green Bay, Wisconsin"
-35,Who was the MVP of Super Bowl III?,Joe Namath,4,Super Bowl,He guaranteed a victory before the game
-36,Which running back was nicknamed Sweetness?,Walter Payton,3,Players,He played his entire career for the Chicago Bears
-37,How many players are on the field per team during a play?,11,1,General,"10 on offense, 10 on defense, plus the ball carrier"
-38,Which team has won the most consecutive Super Bowls?,Pittsburgh Steelers,4,Super Bowl,They won in 1974 and 1975
-39,Who was the first Black head coach to win a Super Bowl?,Tony Dungy,4,History,He coached the Indianapolis Colts to victory
-40,Which team did Brett Favre play for the longest?,Green Bay Packers,2,Players,He played there from 1992 to 2007
-41,Which team won Super Bowl after the 2022 NFL season?,Kansas City Chiefs,3,Super Bowl,They beat the Philadelphia Eagles in the championship game
-42,Which team won Super Bowl after the 2023 NFL season?,Kansas City Chiefs,3,Super Bowl,They beat the San Francisco 49ers in the championship game
+1,Who won Super Bowl I?,Green Bay Packers,1.0,Super Bowl,They were coached by Vince Lombardi
+2,Which quarterback has the most career passing yards?,Tom Brady,3.0,Records,"He played for the Patriots, Buccaneers, and 49ers"
+3,Which team drafted Peyton Manning in 1998?,Indianapolis Colts,1.0,Draft,He went first overall that year
+4,Which wide receiver was nicknamed Megatron?,Calvin Johnson,2.0,Players,He played for the Detroit Lions
+5,Which team has the most Super Bowl appearances?,New England Patriots,3.0,Super Bowl,They've been to the Super Bowl 11 times
+6,Who was the first NFL player to rush for 2000 yards in a season?,O.J. Simpson,3.0,Records,He played for the Buffalo Bills in 1973
+7,What city do the Bears call home?,Chicago,1.0,Teams,Home of the Bears since 1971
+8,Which coach has the most Super Bowl wins?,Bill Belichick,2.01,Coaches,He won 6 Super Bowls with one team
+9,What does NFL stand for?,National Football League,1.0,General,Formed in 1920 as the APFA
+10,Which player is known as the GOAT of NFL quarterbacks?,Tom Brady,1.0,Players,He has 7 Super Bowl rings
+11,Who holds the record for most career receiving touchdowns?,Jerry Rice,3.0,Records,He played for the 49ers and Raiders
+12,In what year was the NFL founded?,1920,3.0,History,It was called the APFA at the time
+13,Which team is known as America's Team?,Dallas Cowboys,1.2,Teams,"They play in AT&T Stadium in Arlington, TX"
+14,Who threw the most touchdown passes in a single season?,Peyton Manning,3.0,Records,He threw 55 in 2013
+15,Which defensive player won the most Defensive Player of the Year awards?,Lawrence Taylor,4.0,Records,He was a linebacker for the New York Giants
+16,What is the name of the trophy awarded to the Super Bowl winner?,Vince Lombardi Trophy,2.0,General,Named after the legendary Green Bay Packers coach
+17,Who was the first overall pick in the 2023 NFL Draft?,Bryce Young,3.0,Draft,He played college ball at Alabama
+18,Which team won Super Bowl LVI?,Los Angeles Rams,1.52,Super Bowl,They beat the Cincinnati Bengals
+19,Who is the all-time leader in career rushing yards?,Emmitt Smith,3.0,Records,He played for the Dallas Cowboys
+20,What team does Patrick Mahomes play for?,Kansas City Chiefs,1.0,Players,He plays in Kansas City
+21,Which stadium is known as the loudest in the NFL?,Arrowhead Stadium,3.0,Stadiums,Home of the Kansas City Chiefs
+22,Who invented the West Coast Offense?,Bill Walsh,4.0,Coaches,He coached the San Francisco 49ers to multiple Super Bowls
+23,Which player was nicknamed The Bus?,Jerome Bettis,3.0,Players,He played for Pittsburgh and other teams
+24,How many points is a touchdown worth?,6,1.0,General,You can score 2 more with a conversion
+25,Which quarterback was known as The Rifleman?,Mark Rypien,5.0,Players,He played for Washington in the early 90s
+26,Who holds the record for most career interceptions?,Paul Krause,4.0,Records,He played for the Minnesota Vikings
+27,Which team drafted Aaron Rodgers?,Green Bay Packers,1.3,Draft,He was the 24th overall pick in 2005
+28,What year did the New Orleans Saints win their first Super Bowl?,2010,3.0,Super Bowl,They beat the Indianapolis Colts
+29,Which receiver caught the Helmet Catch in Super Bowl XLII?,David Tyree,4.0,Super Bowl,He was a wide receiver for the New York Giants
+30,Who was the head coach of the 1985 Chicago Bears?,Mike Ditka,3.0,Coaches,He was a famous Bears tight end before coaching
+31,What team does Joe Burrow play for?,Cincinnati Bengals,1.0,Players,He was the first overall pick in 2020
+32,Which defensive back was known as Primetime?,Deion Sanders,2.0,Players,He was known for his speed and shutdown coverage
+33,Who threw the longest pass in NFL history at 99 yards?,Frank Filchock,5.0,Records,It happened in a 1939 NFL game
+34,Which team plays home games at Lambeau Field?,Green Bay Packers,1.0,Stadiums,"Located in Green Bay, Wisconsin"
+35,Who was the MVP of Super Bowl III?,Joe Namath,4.0,Super Bowl,He guaranteed a victory before the game
+36,Which running back was nicknamed Sweetness?,Walter Payton,3.0,Players,He played his entire career for the Chicago Bears
+37,How many players are on the field per team during a play?,11,1.0,General,"10 on offense, 10 on defense, plus the ball carrier"
+38,Which team has won the most consecutive Super Bowls?,Pittsburgh Steelers,4.0,Super Bowl,They won in 1974 and 1975
+39,Who was the first Black head coach to win a Super Bowl?,Tony Dungy,4.0,History,He coached the Indianapolis Colts to victory
+40,Which team did Brett Favre play for the longest?,Green Bay Packers,2.0,Players,He played there from 1992 to 2007
+41,Which team won Super Bowl after the 2022 NFL season?,Kansas City Chiefs,3.0,Super Bowl,They beat the Philadelphia Eagles in the championship game
+42,Which team won Super Bowl after the 2023 NFL season?,Kansas City Chiefs,3.0,Super Bowl,They beat the San Francisco 49ers in the championship game
+43,Which team won Super Bowl after the 2024 NFL season?,Philadelphia Eagles,3.0,Super Bowl,They beat the Kansas City Chiefs in the championship game
