@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ 'Sign Up' if mode == 'register' else 'Log In' }} — NFL Trivia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060a0f; --surface:#0d1520; --card:#111c2a; --border:#1e3048;
+    --gold:#f5c518; --text:#e8edf2; --muted:#5a7289; --red:#fc8181; --green:#22c55e;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:'Barlow Condensed',sans-serif;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+  }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+    pointer-events:none; z-index:9999;
+  }
+  .card {
+    background:var(--card); border:1px solid var(--border);
+    border-top:3px solid var(--gold);
+    border-radius:8px; padding:40px 36px;
+    width:100%; max-width:380px;
+    position:relative; z-index:1;
+  }
+  .logo {
+    font-family:'Bebas Neue',sans-serif; font-size:2.2rem;
+    letter-spacing:3px; color:var(--gold); text-align:center;
+    margin-bottom:6px; line-height:1;
+  }
+  .logo span { display:block; font-size:.8rem; letter-spacing:6px; color:var(--muted); }
+  h2 {
+    font-family:'Bebas Neue',sans-serif; font-size:1.6rem;
+    letter-spacing:3px; text-align:center; color:var(--text);
+    margin:20px 0 24px;
+  }
+  .field-group { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  label { font-size:.7rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+  input {
+    background:var(--surface); border:1px solid var(--border);
+    color:var(--text); padding:11px 14px;
+    font-family:'Barlow Condensed',sans-serif; font-size:1rem;
+    border-radius:4px; outline:none; transition:border-color .2s; width:100%;
+  }
+  input:focus { border-color:var(--gold); }
+  .btn {
+    background:var(--gold); color:#000; border:none;
+    padding:13px; width:100%; margin-top:8px;
+    font-family:'Bebas Neue',sans-serif; font-size:1.3rem;
+    letter-spacing:3px; cursor:pointer; border-radius:4px;
+    transition:all .2s;
+  }
+  .btn:hover { background:#ffe45e; transform:translateY(-1px); }
+  .flash {
+    padding:10px 14px; border-radius:4px; margin-bottom:16px;
+    font-size:.9rem; background:rgba(252,129,129,.1);
+    border:1px solid rgba(252,129,129,.3); color:var(--red);
+  }
+  .switch {
+    text-align:center; margin-top:20px;
+    font-size:.85rem; color:var(--muted);
+  }
+  .switch a { color:var(--gold); text-decoration:none; }
+  .switch a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">NFL Trivia<span>Adaptive Edition</span></div>
+  <h2>{{ 'Create Account' if mode == 'register' else 'Welcome Back' }}</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST">
+    <div class="field-group">
+      <label>Username</label>
+      <input type="text" name="username" autocomplete="username" autofocus
+             minlength="3" maxlength="30" required>
+    </div>
+    <div class="field-group">
+      <label>Password</label>
+      <input type="password" name="password" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}"
+             minlength="6" required>
+    </div>
+    <button class="btn" type="submit">
+      {{ 'Create Account' if mode == 'register' else 'Log In' }}
+    </button>
+  </form>
+
+  <div class="switch">
+    {% if mode == 'register' %}
+      Already have an account? <a href="/login">Log in</a>
+    {% else %}
+      No account yet? <a href="/register">Sign up free</a>
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

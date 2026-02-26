@@ -443,12 +443,12 @@
 
     <div class="section-title">Update Questions</div>
     <div class="scrape-box">
-      <div>
-        <div style="font-size:1rem; font-weight:600;">Scrape from Pro Football Reference</div>
-        <p>Pull new TD record questions automatically from the web.</p>
-        <div class="scrape-result" id="scrape-result"></div>
+    <div>
+      <div style="font-size:1rem; font-weight:600;">Refresh from NFL Data</div>
+      <p>Pull new stat-based questions from nfl-data-py (passing, rushing, receiving leaders).</p>
+      <div class="scrape-result" id="scrape-result"></div>
       </div>
-      <button class="btn-secondary" id="btn-scrape">Scrape Now</button>
+      <button class="btn-secondary" id="btn-scrape">Refresh Now</button>
     </div>
   </div>
 
@@ -850,6 +850,16 @@ async function showResults() {
       </tr>
     `).join('');
 
+   // ── Refresh questions ───────────────────────────────────────────────────────
+  document.getElementById('btn-scrape').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-scrape');
+    btn.disabled = true; btn.textContent = 'Fetching…';
+    const res = await fetch('/api/refresh-questions', { method: 'POST' });
+    const data = await res.json();
+    document.getElementById('scrape-result').textContent = data.message;
+    btn.disabled = false; btn.textContent = 'Refresh Now';
+  });
+
   // Mini leaderboard
   const lb = document.getElementById('lb-mini');
   lb.innerHTML = `
@@ -866,16 +876,6 @@ async function showResults() {
 
   showScreen('results');
 }
-
-// ── Scrape ─────────────────────────────────────────────────────────────────
-document.getElementById('btn-scrape').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-scrape');
-  btn.disabled = true; btn.textContent = 'Scraping…';
-  const res = await fetch('/api/scrape', { method: 'POST' });
-  const data = await res.json();
-  document.getElementById('scrape-result').textContent = data.message;
-  btn.disabled = false; btn.textContent = 'Scrape Now';
-});
 
 // ── Play again ─────────────────────────────────────────────────────────────
 document.getElementById('btn-play-again').addEventListener('click', () => showScreen('setup'));
