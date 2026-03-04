@@ -67,12 +67,16 @@ def update_skill(mu, q_diff, correct, t_sec, multiplier=1.0, T=8.0, alpha=0.25):
     return mu + alpha * time_weight * delta * multiplier
 
 
-def choose_next(state, pool, asked_ids):
+def choose_next(state, pool, asked_ids, personalized_weights=None):
+    """
+    Pick the next question adaptively.
+    personalized_weights: optional dict of {category: float} from Gemini,
+    where higher weights mean the player needs more practice in that category.
+    """
     candidates = [q for q in pool if q.id not in asked_ids]
     if not candidates:
         return None
 
-    # Widen band until we have enough candidates
     band = 1.5
     while band <= 10:
         in_band = [q for q in candidates if abs(q.difficulty - state.mu) <= band]
@@ -84,16 +88,18 @@ def choose_next(state, pool, asked_ids):
 
     def score(q):
         diff_penalty = abs(q.difficulty - state.mu)
+        base_score = 1.0 / (1 + diff_penalty)
         variety_bonus = 0.4 / (1 + state.category_counts[q.category])
-        return max(0.01, 1.0 / (1 + diff_penalty) + variety_bonus)
+        personal_mult = 1.0
+        if personalized_weights:
+            personal_mult = personalized_weights.get(q.category, 1.0)
+        return max(0.01, (base_score + variety_bonus) * personal_mult)
 
     scores = [score(q) for q in in_band]
-
     top_n = min(6, len(in_band))
     paired = sorted(zip(scores, in_band), key=lambda x: x[0], reverse=True)[:top_n]
     top_scores = [s for s, _ in paired]
-    top_qs     = [q for _, q in paired]
-
+    top_qs = [q for _, q in paired]
     total = sum(top_scores)
     weights = [s / total for s in top_scores]
     return random.choices(top_qs, weights=weights, k=1)[0]
@@ -142,13 +148,10 @@ def _extract_number(s):
 def check_answer(user_ans, correct_ans):
     u = normalize_answer(user_ans)
     c = normalize_answer(correct_ans)
-
     if u == c:
         return True, "Correct!"
-
     if not u:
         return False, f"Wrong. The answer was: {correct_ans}"
-
     c_num = _extract_number(c)
     u_num = _extract_number(u)
     if c_num is not None and u_num is not None:
@@ -157,65 +160,20 @@ def check_answer(user_ans, correct_ans):
         if c.strip().isdigit() and abs(c_num - u_num) <= 1:
             return True, "Close — accepted!"
         return False, f"Wrong. The answer was: {correct_ans}"
-
     u_words = set(u.split())
     c_words = set(c.split())
-
     _generic = {"new", "los", "san", "city", "bay", "north", "south", "east",
                 "west", "york", "england", "angeles", "francisco", "kansas",
                 "green", "tampa", "carolina", "dallas", "denver", "miami",
                 "atlanta", "detroit", "houston", "indiana", "chicago"}
-
     distinctive_c = {w for w in c_words if len(w) >= 4 and w not in _generic}
     if u_words & distinctive_c:
         return True, "Close enough — accepted!"
-
     if len(u_words) >= 2:
         overlap = len(u_words & c_words)
         if overlap >= 2 or (len(c_words) > 0 and overlap / len(c_words) >= 0.5):
             return True, "Close enough — accepted!"
-
     if len(u) >= 5 and len(u) >= len(c) * 0.5:
         if u in c or c in u:
             return True, "Close enough — accepted!"
-
     return False, f"Wrong. The answer was: {correct_ans}"
-
-
-def retrain_difficulty(csv_path, session_history):
-    """
-    After enough real player data accumulates, nudge each question's
-    difficulty toward what the data suggests it should be.
-    Runs automatically at the end of every saved game session.
-    """
-    if len(session_history) < 30:
-        return False
-    try:
-        df_hist = pd.DataFrame(session_history)
-        q_stats = df_hist.groupby("question_id").agg(
-            correct_rate=("is_correct", "mean"),
-            avg_mu=("mu_before", "mean"),
-            count=("is_correct", "count"),
-        ).reset_index()
-        q_stats = q_stats[q_stats["count"] >= 3]
-        if q_stats.empty:
-            return False
-
-        def safe_logit(p):
-            p = max(0.05, min(0.95, p))
-            return math.log(p / (1 - p))
-
-        q_stats["new_difficulty"] = q_stats.apply(
-            lambda r: r["avg_mu"] - safe_logit(r["correct_rate"]) * 0.8, axis=1
-        ).clip(1, 5).round(2)
-
-        df_csv = pd.read_csv(csv_path)
-        updates = dict(zip(q_stats["question_id"], q_stats["new_difficulty"]))
-        df_csv["difficulty"] = df_csv.apply(
-            lambda r: updates.get(r["id"], r["difficulty"]), axis=1
-        )
-        df_csv.to_csv(csv_path, index=False)
-        return True
-    except Exception as e:
-        print(f"Difficulty retrain skipped: {e}")
-        return False

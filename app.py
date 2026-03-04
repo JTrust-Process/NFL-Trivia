@@ -9,8 +9,16 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from src.models import db, User, GameSession, QuestionRecord
 from src.trivia import (
     load_questions, choose_next, update_skill, check_answer,
-    generate_choices, SessionState, retrain_difficulty,
+    generate_choices, SessionState,
 )
+from src.gemini_ai import (
+    smarter_difficulty_calibration,
+    auto_generate_questions,
+    get_personalized_weights,
+)
+
+from dotenv import load_dotenv
+load_dotenv() 
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
@@ -159,6 +167,24 @@ def start_game():
     else:
         rounds = int(data.get("rounds", 15))
 
+    # ── Feature 3: Load personalized weights for this player ──────────────────
+    # Pull their all-time category performance from DB to bias question selection
+    all_records = (QuestionRecord.query
+                   .join(GameSession)
+                   .filter(GameSession.user_id == current_user.id)
+                   .all())
+    cat_counts  = defaultdict(int)
+    cat_correct = defaultdict(int)
+    for r in all_records:
+        if r.category:
+            cat_counts[r.category] += 1
+            if r.is_correct:
+                cat_correct[r.category] += 1
+
+    personalized_weights = get_personalized_weights(
+        dict(cat_counts), dict(cat_correct)
+    )
+
     session.clear()
     session["game"] = {
         "mode": data.get("mode", "free"),
@@ -169,6 +195,7 @@ def start_game():
         "category": cat,
         "current_round": 0, "asked_ids": [], "records": [], "hint_used": False,
         "q_start_time": None,
+        "personalized_weights": personalized_weights,
         "p1_name": current_user.username,
         "p1_mu": 0.0, "p1_streak": 0, "p1_best_streak": 0,
         "p1_streak_multiplier": 1.0, "p1_cat_counts": {}, "p1_cat_correct": {},
@@ -177,7 +204,8 @@ def start_game():
         "p2_streak_multiplier": 1.0, "p2_cat_counts": {}, "p2_cat_correct": {},
         "active_player": 1,
     }
-    return jsonify({"status": "ok", "rounds": rounds, "mode": data.get("mode", "free")})
+    return jsonify({"status": "ok", "rounds": rounds, "mode": data.get("mode", "free"),
+                    "p1_name": current_user.username})
 
 
 @app.route("/api/question", methods=["GET"])
@@ -196,15 +224,23 @@ def get_question():
     if cat and cat != "all":
         questions = [q for q in questions if q.category == cat]
 
-    player    = g["active_player"]
-    state     = _build_state(g, player)
-    q         = choose_next(state, questions, set(g["asked_ids"]))
+    player = g["active_player"]
+    state  = _build_state(g, player)
+
+    # Pass personalized weights into choose_next
+    q = choose_next(state, questions, set(g["asked_ids"]),
+                    personalized_weights=g.get("personalized_weights"))
     if q is None:
         return jsonify({"game_over": True})
+
     g["asked_ids"].append(q.id)
     g["hint_used"] = False
     g["q_start_time"] = time.time()
     session["game"] = g
+
+    # ── Feature 2: Check if pool is running low, generate more in background ──
+    auto_generate_questions(DATA_CSV, g["asked_ids"], current_user.id)
+
     choices = generate_choices(q, questions) if g["mode"] == "multiple_choice" else None
     return jsonify({
         "id": q.id, "question": q.question, "category": q.category,
@@ -313,9 +349,12 @@ def save_results():
             response_time=r["response_time"], mu_before=r["mu_before"],
             mu_after=r["mu_after"], hint_used=r["hint_used"], player=r["player"]))
     db.session.commit()
+
+    # ── Feature 1: Smarter difficulty calibration via Gemini ──────────────────
     all_records = [{"question_id": r.question_id, "is_correct": r.is_correct,
                     "mu_before": r.mu_before} for r in QuestionRecord.query.all()]
-    retrained = retrain_difficulty(DATA_CSV, all_records)
+    retrained = smarter_difficulty_calibration(DATA_CSV, all_records)
+
     rows = (db.session.query(User.username,
                 db.func.max(GameSession.final_mu).label("best_mu"),
                 db.func.avg(GameSession.accuracy).label("avg_accuracy"),

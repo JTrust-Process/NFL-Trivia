@@ -348,14 +348,6 @@
   .play-again-row { display: flex; gap: 10px; }
   .play-again-row .btn-primary { margin-top: 0; }
 
-  /* ── Admin scrape section ── */
-  .scrape-box {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 6px; padding: 16px 20px; margin-bottom: 24px;
-    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  }
-  .scrape-box p { font-size: .9rem; color: var(--muted); }
-  .scrape-result { font-size: .85rem; color: var(--green-bright); margin-top: 4px; }
 
   .section-title {
     font-family: 'Bebas Neue', sans-serif;
@@ -460,15 +452,6 @@
     </div>
     {% endif %}
 
-    <div class="section-title">Update Questions</div>
-    <div class="scrape-box">
-    <div>
-      <div style="font-size:1rem; font-weight:600;">Refresh from NFL Data</div>
-      <p>Pull new stat-based questions from nfl-data-py (passing, rushing, receiving leaders).</p>
-      <div class="scrape-result" id="scrape-result"></div>
-      </div>
-      <button class="btn-secondary" id="btn-scrape">Refresh Now</button>
-    </div>
   </div>
 
   <!-- ── GAME SCREEN ── -->
@@ -919,15 +902,7 @@ function showScreen(name) {
   document.getElementById(`screen-${name}`).classList.add('active');
 }
 
-// ── Refresh questions ───────────────────────────────────────────────────
-document.getElementById('btn-scrape').addEventListener('click', async () => {
-  const btn = document.getElementById('btn-scrape');
-  btn.disabled = true; btn.textContent = 'Fetching…';
-  const res = await fetch('/api/refresh-questions', { method: 'POST' });
-  const data = await res.json();
-  document.getElementById('scrape-result').textContent = data.message;
-  btn.disabled = false; btn.textContent = 'Refresh Now';
-});
+
 </script>
 </body>
 </html>
