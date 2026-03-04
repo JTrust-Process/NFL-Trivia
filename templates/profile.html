@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ user.username }} — NFL Trivia</title>
+<title>{{ user.username }} — 🏈 NFL Trivia</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -82,7 +83,16 @@
 
   @media(max-width:540px) {
     .stats-row { grid-template-columns:1fr 1fr; }
-    .cat-row { grid-template-columns:100px 1fr 50px; }
+    .cat-row { grid-template-columns:90px 1fr 46px; }
+    .logo { font-size: 1.6rem; }
+    .logo span { font-size: .75rem; letter-spacing: 3px; }
+    nav a { font-size: .75rem; margin-left: 8px; }
+    .profile-hero { padding: 16px; gap: 14px; }
+    .username { font-size: 1.5rem; }
+    .avatar { width: 48px; height: 48px; font-size: 1.4rem; }
+    .session-row { flex-direction: column; align-items: flex-start; }
+    .session-row > div:last-child { width: 100%; justify-content: space-between; }
+    .stat-val { font-size: 1.8rem; }
   }
 </style>
 </head>

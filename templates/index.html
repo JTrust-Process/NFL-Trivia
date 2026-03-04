@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NFL Trivia</title>
+<title>🏈 NFL Trivia — Adaptive Edition</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -362,8 +363,22 @@
     .p2-section.show { grid-template-columns: 1fr; }
     .choices { grid-template-columns: 1fr; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
-    .logo { font-size: 2rem; }
-    .score-val { font-size: 1.5rem; }
+    .logo { font-size: 1.6rem; }
+    .logo span { font-size: .75rem; letter-spacing: 3px; }
+    .score-val { font-size: 1.4rem; }
+    .score-label { font-size: .6rem; }
+    .scoreboard { padding: 10px 12px; gap: 6px; }
+    nav a { font-size: .75rem; margin-left: 10px; }
+    nav a:first-child { display: none; } /* hide profile link, keep leaderboard + logout */
+    .q-card { padding: 18px 16px 14px; }
+    .q-text { font-size: 1.3rem; }
+    .result-title { font-size: 2.4rem; }
+    .play-again-row { flex-direction: column; }
+    .play-again-row .btn-secondary { width: 100%; padding: 13px; font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 2px; }
+    .answer-row { flex-direction: column; }
+    .answer-row input { width: 100%; }
+    .btn-submit { width: 100%; }
+    .lb-mini-head, .lb-mini-row { grid-template-columns: 28px 1fr 70px 50px; font-size: .8rem; padding: 8px 10px; }
   }
 </style>
 </head>

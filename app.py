@@ -1,10 +1,12 @@
 import os, time, json, random
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
 from src.models import db, User, GameSession, QuestionRecord
 from src.trivia import (
@@ -18,7 +20,7 @@ from src.gemini_ai import (
 )
 
 from dotenv import load_dotenv
-load_dotenv() 
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
@@ -30,6 +32,16 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
+
+# ── Email config (Flask-Mail) ─────────────────────────────────────────────────
+app.config["MAIL_SERVER"]   = "smtp.gmail.com"
+app.config["MAIL_PORT"]     = 587
+app.config["MAIL_USE_TLS"]  = True
+app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_USERNAME")
+mail = Mail(app)
+serializer = URLSafeTimedSerializer(app.secret_key)
 
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
@@ -56,6 +68,7 @@ def register():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
+        email    = request.form.get("email", "").strip().lower() or None
         if not username or not password:
             flash("Username and password are required.", "error")
         elif len(username) < 3:
@@ -64,8 +77,10 @@ def register():
             flash("Password must be at least 6 characters.", "error")
         elif User.query.filter_by(username=username).first():
             flash("That username is taken.", "error")
+        elif email and User.query.filter_by(email=email).first():
+            flash("That email is already registered.", "error")
         else:
-            user = User(username=username)
+            user = User(username=username, email=email)
             user.set_password(password)
             db.session.add(user)
             db.session.commit()
@@ -95,6 +110,63 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for("login"))
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("index"))
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        email    = request.form.get("email", "").strip().lower()
+        user = User.query.filter_by(username=username).first()
+        # Always show the same message to prevent username enumeration
+        if user and user.email and user.email.lower() == email:
+            try:
+                token = serializer.dumps(user.id, salt="pw-reset")
+                reset_url = url_for("reset_password", token=token, _external=True)
+                msg = Message("Reset your NFL Trivia password", recipients=[email])
+                msg.body = (
+                    f"Hi {username},\n\n"
+                    f"Click the link below to reset your password (expires in 1 hour):\n\n"
+                    f"{reset_url}\n\n"
+                    f"If you didn't request this, just ignore this email.\n\n"
+                    f"— NFL Trivia"
+                )
+                mail.send(msg)
+            except Exception as e:
+                print(f"[Mail] Failed to send reset email: {e}")
+        flash("If that username and email match an account, you'll get a reset link shortly.", "success")
+        return redirect(url_for("forgot_password"))
+    return render_template("forgot_password.html")
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    try:
+        user_id = serializer.loads(token, salt="pw-reset", max_age=3600)
+    except (SignatureExpired, BadSignature):
+        flash("This reset link is invalid or has expired. Please request a new one.", "error")
+        return redirect(url_for("forgot_password"))
+
+    user = db.session.get(User, user_id)
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("forgot_password"))
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        confirm  = request.form.get("confirm", "")
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.", "error")
+        elif password != confirm:
+            flash("Passwords don't match.", "error")
+        else:
+            user.set_password(password)
+            db.session.commit()
+            flash("Password updated! You can now log in.", "success")
+            return redirect(url_for("login"))
+    return render_template("reset_password.html", token=token)
 
 
 # ── Pages ─────────────────────────────────────────────────────────────────────
