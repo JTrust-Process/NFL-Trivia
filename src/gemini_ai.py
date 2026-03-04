@@ -1,4 +1,23 @@
+"""
+src/gemini_ai.py
+────────────────
+Three Gemini-powered features:
+
+1. smarter_difficulty_calibration()
+   Sends player performance data to Gemini and gets back refined
+   difficulty scores + improved hints for questions.
+
+2. auto_generate_questions()
+   Called when a player has seen 70%+ of the question pool.
+   Silently generates 20 new questions and appends to the CSV.
+
+3. get_personalized_weights()
+   Returns per-category bias weights based on a player's weak spots,
+   used by choose_next() to steer question selection.
+"""
+
 import os
+import time
 import re
 import json
 import threading
@@ -225,6 +244,8 @@ Return ONLY a JSON array. Each element must have exactly these keys:
                 "difficulty": round(max(1.0, min(5.0, float(q["difficulty"]))), 2),
                 "category": str(q["category"]).strip(),
                 "hint": str(q["hint"]).strip(),
+                "status": "pending",   # requires admin review before going live
+                "source": "gemini",
             }
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             existing_lower.add(q["question"].strip().lower())
@@ -306,3 +327,64 @@ Player profile to analyze:
     except Exception as e:
         print(f"[Gemini] Personalized weights skipped: {e}")
         return {}
+
+
+# ── Feature 4: Fun Fact After Wrong Answer ────────────────────────────────────
+
+# Simple in-process rate limiter — tracks last call time per user
+# to avoid hammering Gemini on every wrong answer
+_fact_last_called: dict = {}   # user_id -> timestamp
+_FACT_COOLDOWN = 20            # seconds between fun fact calls per user
+
+# Flash-speed model for live gameplay (faster than Pro)
+_FLASH_MODEL = "gemini-1.5-flash"
+_flash_client = None
+
+def _get_flash_client():
+    global _flash_client
+    if _flash_client is None:
+        import google.generativeai as genai
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY not set")
+        genai.configure(api_key=api_key)
+        _flash_client = genai.GenerativeModel(_FLASH_MODEL)
+    return _flash_client
+
+
+def get_fun_fact(question: str, correct_answer: str, category: str, user_id: int) -> str:
+    """
+    Returns a single interesting fact about the correct answer to show
+    after a player gets a question wrong.
+
+    Rate limited to once every 20 seconds per user to avoid API abuse.
+    Returns an empty string if rate limited or on any error, so gameplay
+    is never blocked.
+    """
+    now = time.time()
+    last = _fact_last_called.get(user_id, 0)
+    if now - last < _FACT_COOLDOWN:
+        return ""  # Rate limited — silently skip
+
+    _fact_last_called[user_id] = now
+
+    try:
+        prompt = (
+            f"NFL trivia question: {question}\n"
+            f"Correct answer: {correct_answer}\n"
+            f"Category: {category}\n\n"
+            f"Write ONE interesting fact about '{correct_answer}' related to this question. "
+            f"Keep it to a single sentence, max 20 words. "
+            f"Be specific and surprising — not just a restatement of the answer. "
+            f"Do not start with 'Did you know'. No emojis. Plain text only."
+        )
+        model = _get_flash_client()
+        response = model.generate_content(prompt)
+        fact = response.text.strip().strip('"').strip("'")
+        # Sanity check — reject if too long or empty
+        if not fact or len(fact) > 200:
+            return ""
+        return fact
+    except Exception as e:
+        print(f"[Gemini] Fun fact skipped: {e}")
+        return ""

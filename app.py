@@ -2,6 +2,7 @@ import os, time, json, random
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
+import pandas as pd
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -17,6 +18,7 @@ from src.gemini_ai import (
     smarter_difficulty_calibration,
     auto_generate_questions,
     get_personalized_weights,
+    get_fun_fact,
 )
 
 from dotenv import load_dotenv
@@ -48,6 +50,32 @@ login_manager.login_view = "login"
 login_manager.login_message = "Please log in to play."
 
 DATA_CSV = "data/nfl_trivia.csv"
+
+# ── Question cache ────────────────────────────────────────────────────────────
+# Avoids reading the CSV from disk on every single API call.
+# Invalidated automatically when the CSV is written to (auto-generate, calibration).
+_question_cache: list = []
+_cache_mtime: float = 0.0
+
+def get_questions() -> list:
+    """Return cached questions, reloading from CSV only if the file has changed.
+    Filters out pending and rejected questions so only approved ones are served."""
+    global _question_cache, _cache_mtime
+    try:
+        mtime = os.path.getmtime(DATA_CSV)
+        if mtime != _cache_mtime or not _question_cache:
+            all_qs = load_questions(DATA_CSV)
+            # Read status column directly to filter — load_questions doesn't expose it
+            df = pd.read_csv(DATA_CSV)
+            if "status" in df.columns:
+                approved_ids = set(df[df["status"] == "approved"]["id"].tolist())
+                _question_cache = [q for q in all_qs if q.id in approved_ids]
+            else:
+                _question_cache = all_qs  # no status col yet, serve all
+            _cache_mtime = mtime
+    except FileNotFoundError:
+        _question_cache = []
+    return _question_cache
 
 
 @login_manager.user_loader
@@ -289,7 +317,7 @@ def get_question():
     if g["current_round"] >= g["rounds"]:
         return jsonify({"game_over": True})
 
-    questions = load_questions(DATA_CSV)
+    questions = get_questions()
 
     # Filter by category if set
     cat = g.get("category", "all")
@@ -334,7 +362,7 @@ def get_hint():
     g = session.get("game")
     if not g or g.get("hint_used") or not g["asked_ids"]:
         return jsonify({"hint": ""})
-    q = next((x for x in load_questions(DATA_CSV) if x.id == g["asked_ids"][-1]), None)
+    q = next((x for x in get_questions() if x.id == g["asked_ids"][-1]), None)
     hint_text = (q.hint if q and q.hint and q.hint != "nan" else "No hint available.")
     player = g["active_player"]
     g[f"p{player}_mu"] = round(g[f"p{player}_mu"] - 0.15, 4)
@@ -352,7 +380,7 @@ def submit_answer():
     data      = request.json
     user_ans  = data.get("answer", "").strip()
     timed_out = data.get("timed_out", False)
-    q = next((x for x in load_questions(DATA_CSV) if x.id == g["asked_ids"][-1]), None)
+    q = next((x for x in get_questions() if x.id == g["asked_ids"][-1]), None)
     if not q:
         return jsonify({"error": "Question not found"}), 400
     t_elapsed = min(time.time() - (g["q_start_time"] or time.time()), 60.0)
@@ -389,8 +417,15 @@ def submit_answer():
     streak = g[f"p{player}_streak"]
     streak_msg = ({3:"🔥 3 in a row!",5:"🔥🔥 5 streak!",7:"🔥🔥🔥 Unstoppable!"}.get(streak,"")
                   or ("🔥🔥🔥 Unstoppable!" if streak > 7 else ""))
+
+    # Fun fact — only on wrong answers, rate limited per user
+    fun_fact = ""
+    if not is_correct:
+        fun_fact = get_fun_fact(q.question, q.answer, q.category, current_user.id)
+
     return jsonify({
         "is_correct": is_correct, "feedback": feedback, "correct_answer": q.answer,
+        "fun_fact": fun_fact,
         "mu_before": round(prev_mu, 2), "mu_after": round(new_mu, 2),
         "delta": round(new_mu - prev_mu, 3), "streak": streak, "streak_msg": streak_msg,
         "multiplier": round(g[f"p{player}_streak_multiplier"], 2),
@@ -463,7 +498,7 @@ def save_results():
 @app.route("/api/categories", methods=["GET"])
 @login_required
 def get_categories():
-    questions = load_questions(DATA_CSV)
+    questions = get_questions()
     cats = sorted(set(q.category for q in questions))
     return jsonify({"categories": cats})
 
@@ -477,6 +512,102 @@ def _build_state(g, player):
     s.category_counts  = defaultdict(int, g.get(f"p{player}_cat_counts", {}))
     s.category_correct = defaultdict(int, g.get(f"p{player}_cat_correct", {}))
     return s
+
+
+# ── Admin ─────────────────────────────────────────────────────────────────────
+def admin_required(f):
+    """Decorator: requires login + is_admin flag."""
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash("Admin access required.", "error")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/admin")
+@login_required
+@admin_required
+def admin_page():
+    """Shows all questions with pending/approved/rejected status."""
+    df = pd.read_csv(DATA_CSV)
+    if "status" not in df.columns:
+        df["status"] = "approved"   # treat all existing questions as approved
+        df["source"] = df.get("source", "manual")
+    questions = df.to_dict("records")
+    pending   = [q for q in questions if str(q.get("status","approved")) == "pending"]
+    approved  = [q for q in questions if str(q.get("status","approved")) == "approved"]
+    rejected  = [q for q in questions if str(q.get("status","approved")) == "rejected"]
+    return render_template("admin.html", user=current_user,
+                           pending=pending, approved=approved, rejected=rejected,
+                           total=len(questions))
+
+
+@app.route("/admin/review", methods=["POST"])
+@login_required
+@admin_required
+def admin_review():
+    """Handle approve / reject / edit actions from the admin page."""
+    q_id     = request.form.get("id", type=int)
+    action   = request.form.get("action")          # approve | reject | edit
+    new_q    = request.form.get("question", "").strip()
+    new_a    = request.form.get("answer", "").strip()
+    new_diff = request.form.get("difficulty", type=float)
+    new_hint = request.form.get("hint", "").strip()
+
+    if not q_id or action not in ("approve", "reject", "edit"):
+        flash("Invalid request.", "error")
+        return redirect(url_for("admin_page"))
+
+    df = pd.read_csv(DATA_CSV)
+    if "status" not in df.columns:
+        df["status"] = "approved"
+    if "source" not in df.columns:
+        df["source"] = "manual"
+
+    mask = df["id"] == q_id
+    if not mask.any():
+        flash("Question not found.", "error")
+        return redirect(url_for("admin_page"))
+
+    if action == "approve":
+        df.loc[mask, "status"] = "approved"
+        flash(f"Question #{q_id} approved.", "success")
+    elif action == "reject":
+        df.loc[mask, "status"] = "rejected"
+        flash(f"Question #{q_id} rejected.", "success")
+    elif action == "edit":
+        if new_q:  df.loc[mask, "question"]   = new_q
+        if new_a:  df.loc[mask, "answer"]     = new_a
+        if new_diff: df.loc[mask, "difficulty"] = round(max(1.0, min(5.0, new_diff)), 2)
+        if new_hint: df.loc[mask, "hint"]     = new_hint
+        df.loc[mask, "status"] = "approved"
+        flash(f"Question #{q_id} updated and approved.", "success")
+
+    df.to_csv(DATA_CSV, index=False)
+    # Invalidate question cache
+    global _cache_mtime
+    _cache_mtime = 0.0
+
+    return redirect(url_for("admin_page"))
+
+
+@app.route("/admin/make-admin", methods=["POST"])
+@login_required
+@admin_required
+def make_admin():
+    """Grant admin to another user by username."""
+    username = request.form.get("username", "").strip()
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash(f"User '{username}' not found.", "error")
+    else:
+        user.is_admin = True
+        db.session.commit()
+        flash(f"{username} is now an admin.", "success")
+    return redirect(url_for("admin_page"))
 
 
 if __name__ == "__main__":

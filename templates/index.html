@@ -290,6 +290,15 @@
   .mu-delta.up   { color: var(--green-bright); }
   .mu-delta.down { color: var(--red); }
 
+  /* ── Fun fact ── */
+  .fun-fact {
+    font-size: .9rem; color: var(--muted); font-style: italic;
+    margin-top: 8px; min-height: 0; line-height: 1.4;
+    padding: 0 2px;
+    animation: fadeIn .4s ease;
+  }
+  .fun-fact.show { display: block; }
+
   /* ── Results screen ── */
   .result-hero {
     text-align: center; padding: 32px 0 24px;
@@ -542,6 +551,7 @@
     <!-- Feedback -->
     <div class="streak-banner" id="streak-banner"></div>
     <div class="feedback-banner" id="feedback-banner"></div>
+    <div class="fun-fact" id="fun-fact"></div>
     <div class="mu-delta" id="mu-delta"></div>
     <button class="btn-next" id="btn-next">NEXT QUESTION →</button>
   </div>
@@ -661,6 +671,7 @@ async function loadQuestion() {
   // Reset UI
   document.getElementById('feedback-banner').className = 'feedback-banner';
   document.getElementById('streak-banner').textContent = '';
+  document.getElementById('fun-fact').textContent = '';
   document.getElementById('mu-delta').textContent = '';
   document.getElementById('hint-text').textContent = '';
   document.getElementById('answer-input').value = '';
@@ -789,6 +800,14 @@ async function submitAnswer(userAns, timedOut = false) {
 
   // Streak banner
   document.getElementById('streak-banner').textContent = data.streak_msg || '';
+
+  // Fun fact (wrong answers only, may be empty if rate limited)
+  const factEl = document.getElementById('fun-fact');
+  if (data.fun_fact) {
+    factEl.textContent = '💡 ' + data.fun_fact;
+  } else {
+    factEl.textContent = '';
+  }
 
   // MC highlight correct/wrong
   if (state.currentQ?.choices) {

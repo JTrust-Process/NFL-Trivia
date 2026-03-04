@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — 🏈 NFL Trivia</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060a0f; --surface:#0d1520; --card:#111c2a; --border:#1e3048;
+    --gold:#f5c518; --text:#e8edf2; --muted:#5a7289;
+    --green:#22c55e; --red:#e53e3e; --accent:#3b82f6;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+    pointer-events:none; z-index:9999;
+  }
+  .wrapper { max-width:900px; margin:0 auto; padding:0 16px 60px; position:relative; z-index:1; }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 0 16px; border-bottom:2px solid var(--gold); margin-bottom:28px;
+  }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:2.2rem; letter-spacing:3px; color:var(--gold); line-height:1; }
+  .logo span { color:var(--text); font-size:.9rem; display:block; letter-spacing:5px; }
+  nav a { color:var(--muted); text-decoration:none; font-size:.85rem; letter-spacing:1px; text-transform:uppercase; margin-left:16px; }
+  nav a:hover { color:var(--gold); }
+
+  .section-title {
+    font-family:'Bebas Neue',sans-serif; font-size:1.3rem; letter-spacing:3px; color:var(--muted);
+    text-transform:uppercase; margin:28px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .badge {
+    font-size:.75rem; padding:3px 10px; border-radius:3px;
+    font-family:'Barlow Condensed',sans-serif; letter-spacing:1px;
+  }
+  .badge-pending  { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+  .badge-approved { background:rgba(34,197,94,.12);  color:var(--green); border:1px solid rgba(34,197,94,.3); }
+  .badge-rejected { background:rgba(229,62,62,.12);  color:var(--red); border:1px solid rgba(229,62,62,.3); }
+
+  .flash { padding:10px 14px; border-radius:4px; margin-bottom:16px; font-size:.9rem; }
+  .flash.success { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); color:var(--green); }
+  .flash.error   { background:rgba(229,62,62,.1); border:1px solid rgba(229,62,62,.3); color:var(--red); }
+
+  .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:8px; }
+  .stat-box { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:14px; text-align:center; }
+  .stat-val { font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--gold); line-height:1; }
+  .stat-label { font-size:.65rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-top:4px; }
+
+  /* Question cards */
+  .q-card {
+    background:var(--card); border:1px solid var(--border); border-radius:6px;
+    padding:16px 18px; margin-bottom:10px;
+  }
+  .q-card.pending  { border-left:3px solid #f59e0b; }
+  .q-card.approved { border-left:3px solid var(--green); }
+  .q-card.rejected { border-left:3px solid var(--red); opacity:.6; }
+  .q-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .q-text { font-size:1.05rem; font-weight:600; flex:1; min-width:200px; }
+  .q-answer { color:var(--gold); font-size:.95rem; margin-top:4px; }
+  .q-meta-row { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; align-items:center; }
+  .q-tag {
+    font-size:.7rem; letter-spacing:1px; text-transform:uppercase;
+    padding:2px 8px; border-radius:3px;
+    background:rgba(59,130,246,.1); color:var(--accent); border:1px solid rgba(59,130,246,.2);
+  }
+  .q-diff { font-size:.75rem; color:var(--muted); }
+  .q-hint { font-size:.8rem; color:var(--muted); font-style:italic; margin-top:4px; }
+  .q-source { font-size:.7rem; letter-spacing:1px; color:var(--muted); }
+
+  /* Action buttons */
+  .btn-row { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .btn-approve {
+    background:rgba(34,197,94,.15); color:var(--green); border:1px solid rgba(34,197,94,.3);
+    padding:6px 16px; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:2px;
+    cursor:pointer; border-radius:4px; transition:all .2s;
+  }
+  .btn-approve:hover { background:rgba(34,197,94,.3); }
+  .btn-reject {
+    background:rgba(229,62,62,.12); color:var(--red); border:1px solid rgba(229,62,62,.3);
+    padding:6px 16px; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:2px;
+    cursor:pointer; border-radius:4px; transition:all .2s;
+  }
+  .btn-reject:hover { background:rgba(229,62,62,.25); }
+  .btn-edit-toggle {
+    background:transparent; color:var(--muted); border:1px solid var(--border);
+    padding:6px 16px; font-family:'Barlow Condensed',sans-serif; font-size:.85rem; letter-spacing:1px;
+    text-transform:uppercase; cursor:pointer; border-radius:4px; transition:all .2s;
+  }
+  .btn-edit-toggle:hover { border-color:var(--muted); color:var(--text); }
+
+  /* Edit form */
+  .edit-form { display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+  .edit-form.open { display:block; }
+  .edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .edit-grid.full { grid-template-columns:1fr; }
+  .edit-field { display:flex; flex-direction:column; gap:4px; }
+  .edit-label { font-size:.65rem; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+  .edit-input {
+    background:var(--surface); border:1px solid var(--border); color:var(--text);
+    padding:8px 12px; font-family:'Barlow Condensed',sans-serif; font-size:.95rem;
+    border-radius:4px; outline:none; transition:border-color .2s; width:100%;
+  }
+  .edit-input:focus { border-color:var(--gold); }
+  .btn-save {
+    background:var(--gold); color:#000; border:none;
+    padding:8px 20px; font-family:'Bebas Neue',sans-serif; font-size:1rem; letter-spacing:2px;
+    cursor:pointer; border-radius:4px; transition:all .2s;
+  }
+  .btn-save:hover { background:#ffe45e; }
+
+  /* Make admin form */
+  .make-admin-box {
+    background:var(--card); border:1px solid var(--border); border-radius:6px;
+    padding:16px 18px; margin-top:8px; display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;
+  }
+  .make-admin-box .edit-field { flex:1; min-width:160px; }
+
+  .empty { color:var(--muted); font-size:.95rem; padding:16px 0; font-style:italic; }
+
+  @media(max-width:540px) {
+    .edit-grid { grid-template-columns:1fr; }
+    .stats-row { grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="logo">NFL Trivia<span>Admin Panel</span></div>
+    <nav>
+      <a href="/">← Game</a>
+      <a href="/logout">Log out</a>
+    </nav>
+  </header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-val">{{ total }}</div>
+      <div class="stat-label">Total Questions</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color:#f59e0b">{{ pending|length }}</div>
+      <div class="stat-label">Pending Review</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color:var(--green)">{{ approved|length }}</div>
+      <div class="stat-label">Approved</div>
+    </div>
+  </div>
+
+  <!-- Pending questions -->
+  <div class="section-title">
+    Pending Review
+    <span class="badge badge-pending">{{ pending|length }} questions</span>
+  </div>
+
+  {% if pending %}
+    {% for q in pending %}
+    <div class="q-card pending">
+      <div class="q-top">
+        <div>
+          <div class="q-text">{{ q.question }}</div>
+          <div class="q-answer">→ {{ q.answer }}</div>
+        </div>
+      </div>
+      <div class="q-meta-row">
+        <span class="q-tag">{{ q.category }}</span>
+        <span class="q-diff">Difficulty: {{ q.difficulty }}</span>
+        <span class="q-source">Source: {{ q.get('source', 'gemini') }}</span>
+      </div>
+      {% if q.hint %}<div class="q-hint">💡 {{ q.hint }}</div>{% endif %}
+
+      <div class="btn-row">
+        <form method="POST" action="/admin/review" style="display:inline">
+          <input type="hidden" name="id" value="{{ q.id }}">
+          <input type="hidden" name="action" value="approve">
+          <button class="btn-approve" type="submit">✓ Approve</button>
+        </form>
+        <form method="POST" action="/admin/review" style="display:inline">
+          <input type="hidden" name="id" value="{{ q.id }}">
+          <input type="hidden" name="action" value="reject">
+          <button class="btn-reject" type="submit">✗ Reject</button>
+        </form>
+        <button class="btn-edit-toggle" onclick="toggleEdit('edit-{{ q.id }}')">✎ Edit</button>
+      </div>
+
+      <!-- Edit form -->
+      <div class="edit-form" id="edit-{{ q.id }}">
+        <form method="POST" action="/admin/review">
+          <input type="hidden" name="id" value="{{ q.id }}">
+          <input type="hidden" name="action" value="edit">
+          <div class="edit-grid">
+            <div class="edit-field edit-grid full">
+              <label class="edit-label">Question</label>
+              <input class="edit-input" name="question" value="{{ q.question }}">
+            </div>
+          </div>
+          <div class="edit-grid">
+            <div class="edit-field">
+              <label class="edit-label">Answer</label>
+              <input class="edit-input" name="answer" value="{{ q.answer }}">
+            </div>
+            <div class="edit-field">
+              <label class="edit-label">Difficulty (1–5)</label>
+              <input class="edit-input" name="difficulty" type="number" step="0.1" min="1" max="5" value="{{ q.difficulty }}">
+            </div>
+          </div>
+          <div class="edit-grid full" style="margin-bottom:10px">
+            <div class="edit-field">
+              <label class="edit-label">Hint</label>
+              <input class="edit-input" name="hint" value="{{ q.hint or '' }}">
+            </div>
+          </div>
+          <button class="btn-save" type="submit">Save & Approve</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">No questions pending review — you're all caught up!</div>
+  {% endif %}
+
+  <!-- Approved questions (collapsed summary) -->
+  <div class="section-title">
+    Approved
+    <span class="badge badge-approved">{{ approved|length }} questions</span>
+  </div>
+  {% if approved %}
+    {% for q in approved[:10] %}
+    <div class="q-card approved">
+      <div class="q-text" style="font-size:.95rem">{{ q.question }}</div>
+      <div class="q-answer" style="font-size:.85rem">→ {{ q.answer }}</div>
+      <div class="q-meta-row">
+        <span class="q-tag">{{ q.category }}</span>
+        <span class="q-diff">Difficulty: {{ q.difficulty }}</span>
+      </div>
+    </div>
+    {% endfor %}
+    {% if approved|length > 10 %}
+      <div class="empty">...and {{ approved|length - 10 }} more approved questions</div>
+    {% endif %}
+  {% endif %}
+
+  <!-- Rejected -->
+  {% if rejected %}
+  <div class="section-title">
+    Rejected
+    <span class="badge badge-rejected">{{ rejected|length }} questions</span>
+  </div>
+  {% for q in rejected %}
+  <div class="q-card rejected">
+    <div class="q-text" style="font-size:.9rem">{{ q.question }}</div>
+    <div class="q-answer" style="font-size:.85rem">→ {{ q.answer }}</div>
+    <div class="q-meta-row">
+      <span class="q-tag">{{ q.category }}</span>
+      <!-- Allow re-approving rejected questions -->
+      <form method="POST" action="/admin/review" style="display:inline">
+        <input type="hidden" name="id" value="{{ q.id }}">
+        <input type="hidden" name="action" value="approve">
+        <button class="btn-approve" type="submit" style="padding:3px 10px;font-size:.8rem">↩ Restore</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- Grant admin -->
+  <div class="section-title">Grant Admin Access</div>
+  <div class="make-admin-box">
+    <form method="POST" action="/admin/make-admin" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;width:100%">
+      <div class="edit-field" style="flex:1;min-width:160px">
+        <label class="edit-label">Username</label>
+        <input class="edit-input" name="username" placeholder="Enter username" required>
+      </div>
+      <button class="btn-save" type="submit">Grant Admin</button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+function toggleEdit(id) {
+  const form = document.getElementById(id);
+  form.classList.toggle('open');
+}
+</script>
+</body>
+</html>
