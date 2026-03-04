@@ -613,3 +613,23 @@ def make_admin():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)
+
+
+# ── TEMPORARY BOOTSTRAP ROUTES — REMOVE AFTER FIRST DEPLOY ───────────────────
+@app.route("/db-reset")
+def db_reset():
+    """Drops and recreates all tables. ONE-TIME USE — delete after running."""
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+    return "Database reset! Now visit /make-me-admin after registering."
+
+@app.route("/make-me-admin/<username>")
+def make_me_admin(username):
+    """Grants admin to the given username. ONE-TIME USE — delete after running."""
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return f"User '{username}' not found. Register first, then visit this URL."
+    user.is_admin = True
+    db.session.commit()
+    return f"Done! {username} is now an admin. Delete these routes now."
