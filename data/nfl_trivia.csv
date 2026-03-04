@@ -11,7 +11,7 @@ id,question,answer,difficulty,category,hint
 10,Which player is known as the GOAT of NFL quarterbacks?,Tom Brady,1.0,Players,He has 7 Super Bowl rings
 11,Who holds the record for most career receiving touchdowns?,Jerry Rice,3.0,Records,He played for the 49ers and Raiders
 12,In what year was the NFL founded?,1920,3.0,History,It was called the APFA at the time
-13,Which team is known as America's Team?,Dallas Cowboys,1.2,Teams,"They play in AT&T Stadium in Arlington, TX"
+13,Which team is known as America's Team?,Dallas Cowboys,1.0,Teams,"They play in AT&T Stadium in Arlington, TX"
 14,Who threw the most touchdown passes in a single season?,Peyton Manning,3.0,Records,He threw 55 in 2013
 15,Which defensive player won the most Defensive Player of the Year awards?,Lawrence Taylor,4.0,Records,He was a linebacker for the New York Giants
 16,What is the name of the trophy awarded to the Super Bowl winner?,Vince Lombardi Trophy,2.0,General,Named after the legendary Green Bay Packers coach
@@ -42,3 +42,18 @@ id,question,answer,difficulty,category,hint
 41,Which team won Super Bowl after the 2022 NFL season?,Kansas City Chiefs,3.0,Super Bowl,They beat the Philadelphia Eagles in the championship game
 42,Which team won Super Bowl after the 2023 NFL season?,Kansas City Chiefs,3.0,Super Bowl,They beat the San Francisco 49ers in the championship game
 43,Which team won Super Bowl after the 2024 NFL season?,Philadelphia Eagles,3.0,Super Bowl,They beat the Kansas City Chiefs in the championship game
+44,Which team won the Super Bowl after the 2022 NFL season?,Kansas City Chiefs,3.0,Super Bowl,They beat the Philadelphia Eagles in the championship game
+45,What was the final score of the Super Bowl after the 2022 NFL season?,38-35,5.0,Super Bowl,Kansas City Chiefs defeated Philadelphia Eagles
+46,Which team did the Super Bowl champions defeat in the 2022 NFL championship game?,Philadelphia Eagles,4.0,Super Bowl,They lost to the Kansas City Chiefs by a score of 38-35
+47,Which team won the Super Bowl after the 2023 NFL season?,Kansas City Chiefs,3.0,Super Bowl,They beat the San Francisco 49ers in the championship game
+48,What was the final score of the Super Bowl after the 2023 NFL season?,25-22,5.0,Super Bowl,Kansas City Chiefs defeated San Francisco 49ers
+49,Which team did the Super Bowl champions defeat in the 2023 NFL championship game?,San Francisco 49ers,4.0,Super Bowl,They lost to the Kansas City Chiefs by a score of 25-22
+50,Which team won the Super Bowl after the 2024 NFL season?,Philadelphia Eagles,3.0,Super Bowl,They beat the Kansas City Chiefs in the championship game
+51,What was the final score of the Super Bowl after the 2024 NFL season?,40-22,5.0,Super Bowl,Philadelphia Eagles defeated Kansas City Chiefs
+52,Which team did the Super Bowl champions defeat in the 2024 NFL championship game?,Kansas City Chiefs,4.0,Super Bowl,They lost to the Philadelphia Eagles by a score of 40-22
+53,Which team won the Super Bowl after the 2020 NFL season?,Tampa Bay Buccaneers,3.0,Super Bowl,They beat the Kansas City Chiefs in the championship game
+54,What was the final score of the Super Bowl after the 2020 NFL season?,31-9,5.0,Super Bowl,Tampa Bay Buccaneers defeated Kansas City Chiefs
+55,Which team did the Super Bowl champions defeat in the 2020 NFL championship game?,Kansas City Chiefs,4.0,Super Bowl,They lost to the Tampa Bay Buccaneers by a score of 31-9
+56,Which team won the Super Bowl after the 2021 NFL season?,LA,3.0,Super Bowl,They beat the Cincinnati Bengals in the championship game
+57,What was the final score of the Super Bowl after the 2021 NFL season?,23-20,5.0,Super Bowl,LA defeated Cincinnati Bengals
+58,Which team did the Super Bowl champions defeat in the 2021 NFL championship game?,Cincinnati Bengals,4.0,Super Bowl,They lost to the LA by a score of 23-20

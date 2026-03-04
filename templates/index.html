@@ -402,6 +402,12 @@
           <option value="30">30 Questions</option>
         </select>
       </div>
+      <div class="field-group">
+        <label>Category</label>
+        <select id="category-select">
+          <option value="all">All Categories</option>
+        </select>
+      </div>
     </div>
 
     <div class="section-title" style="margin-top:20px">Game Options</div>
@@ -438,6 +444,7 @@
     </div>
 
     <button class="btn-primary" id="btn-start">KICK OFF</button>
+    <button class="btn-secondary" id="btn-daily" style="width:100%;margin-top:10px;padding:13px;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:2px;border-color:var(--gold);color:var(--gold);">📅 Daily Challenge — Same 10 Qs for Everyone Today</button>
 
     {% if recent %}
     <div class="section-title">Recent Games</div>
@@ -581,13 +588,26 @@ const state = {
   timeLeft: 15,
 };
 
+// ── Populate category dropdown on page load ────────────────────────────────
+(async () => {
+  try {
+    const res  = await fetch('/api/categories');
+    const data = await res.json();
+    const sel  = document.getElementById('category-select');
+    data.categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat; opt.textContent = cat;
+      sel.appendChild(opt);
+    });
+  } catch(e) { /* silently skip if endpoint unavailable */ }
+})();
+
 // ── Toggle buttons ──────────────────────────────────────────────────────────
 document.querySelectorAll('.toggle-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const group = btn.dataset.group;
     document.querySelectorAll(`[data-group="${group}"]`).forEach(b => b.classList.remove('on'));
     btn.classList.add('on');
-
     if (group === 'mode')  state.mode  = btn.dataset.val;
     if (group === 'timed') state.timed = btn.dataset.val === 'true';
     if (group === 'mp') {
@@ -597,17 +617,19 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
   });
 });
 
-// ── Start game ─────────────────────────────────────────────────────────────
-document.getElementById('btn-start').addEventListener('click', async () => {
+// ── Shared game start helper ───────────────────────────────────────────────
+async function startGame(daily = false) {
   const rounds   = parseInt(document.getElementById('rounds-select').value);
   const p2name   = document.getElementById('player2-name').value.trim() || 'Player 2';
+  const category = document.getElementById('category-select').value;
 
   const res = await fetch('/api/start', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({
       mode: state.mode, timed: state.timed, rounds,
-      multiplayer: state.mp, player2_name: p2name
+      multiplayer: state.mp, player2_name: p2name,
+      category, daily
     })
   });
   if (!res.ok) return;
@@ -615,14 +637,23 @@ document.getElementById('btn-start').addEventListener('click', async () => {
 
   document.getElementById('p1-label').textContent = startData.p1_name || 'You';
   document.getElementById('p2-label').textContent = p2name;
-  document.getElementById('round-total').textContent = `of ${rounds}`;
+  document.getElementById('round-total').textContent = `of ${startData.rounds}`;
+  document.getElementById('p2-score-block').style.display = state.mp ? 'block' : 'none';
 
-  const mpBlock = document.getElementById('p2-score-block');
-  mpBlock.style.display = state.mp ? 'block' : 'none';
+  if (startData.daily) {
+    const tb = document.getElementById('turn-banner');
+    if (tb) { tb.style.display = 'block'; tb.textContent = '📅 Daily Challenge'; }
+  }
 
   showScreen('game');
   loadQuestion();
-});
+}
+
+// ── Kick Off button ────────────────────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click', () => startGame(false));
+
+// ── Daily Challenge button ─────────────────────────────────────────────────
+document.getElementById('btn-daily').addEventListener('click', () => startGame(true));
 
 // ── Load question ──────────────────────────────────────────────────────────
 async function loadQuestion() {

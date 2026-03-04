@@ -1,7 +1,7 @@
-import os, time, json
-from datetime import datetime
+import os, time, json, random
 from pathlib import Path
 from collections import defaultdict
+from datetime import datetime, timezone
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -9,9 +9,8 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from src.models import db, User, GameSession, QuestionRecord
 from src.trivia import (
     load_questions, choose_next, update_skill, check_answer,
-    generate_choices, SessionState, retrain_difficulty, append_scraped_questions,
+    generate_choices, SessionState, retrain_difficulty,
 )
-from src.nfl_data import generate_questions_from_nfl_data
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", os.urandom(24))
@@ -39,13 +38,6 @@ def load_user(user_id):
 def init_db():
     with app.app_context():
         db.create_all()
-        try:
-            new_qs = generate_questions_from_nfl_data(seasons=[2022, 2023])
-            added  = append_scraped_questions(DATA_CSV, new_qs)
-            if added:
-                print(f"[startup] Added {added} new questions from nfl-data-py")
-        except Exception as e:
-            print(f"[startup] nfl-data-py seed skipped: {e}")
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -155,13 +147,26 @@ def profile():
 @app.route("/api/start", methods=["POST"])
 @login_required
 def start_game():
-    data = request.json
+    data  = request.json
+    daily = data.get("daily", False)
+    cat   = data.get("category", "all")
+
+    if daily:
+        import hashlib
+        seed = int(hashlib.md5(datetime.now(timezone.utc).strftime("%Y-%m-%d").encode()).hexdigest(), 16) % (2**31)
+        random.seed(seed)
+        rounds = 10
+    else:
+        rounds = int(data.get("rounds", 15))
+
     session.clear()
     session["game"] = {
         "mode": data.get("mode", "free"),
         "timed": data.get("timed", False),
-        "rounds": int(data.get("rounds", 15)),
+        "rounds": rounds,
         "multiplayer": data.get("multiplayer", False),
+        "daily": daily,
+        "category": cat,
         "current_round": 0, "asked_ids": [], "records": [], "hint_used": False,
         "q_start_time": None,
         "p1_name": current_user.username,
@@ -172,7 +177,7 @@ def start_game():
         "p2_streak_multiplier": 1.0, "p2_cat_counts": {}, "p2_cat_correct": {},
         "active_player": 1,
     }
-    return jsonify({"status": "ok", "rounds": session["game"]["rounds"], "p1_name": current_user.username})
+    return jsonify({"status": "ok", "rounds": rounds, "mode": data.get("mode", "free")})
 
 
 @app.route("/api/question", methods=["GET"])
@@ -183,7 +188,14 @@ def get_question():
         return jsonify({"error": "No active game"}), 400
     if g["current_round"] >= g["rounds"]:
         return jsonify({"game_over": True})
+
     questions = load_questions(DATA_CSV)
+
+    # Filter by category if set
+    cat = g.get("category", "all")
+    if cat and cat != "all":
+        questions = [q for q in questions if q.category == cat]
+
     player    = g["active_player"]
     state     = _build_state(g, player)
     q         = choose_next(state, questions, set(g["asked_ids"]))
@@ -337,15 +349,12 @@ def save_results():
                     "p2": p2_result, "categories": cats, "leaderboard": leaderboard})
 
 
-@app.route("/api/refresh-questions", methods=["POST"])
+@app.route("/api/categories", methods=["GET"])
 @login_required
-def refresh_questions():
-    try:
-        new_qs = generate_questions_from_nfl_data(seasons=[2022, 2023, 2024])
-        added  = append_scraped_questions(DATA_CSV, new_qs)
-        return jsonify({"added": added, "message": f"Added {added} new questions from NFL data."})
-    except Exception as e:
-        return jsonify({"added": 0, "message": f"Failed: {e}"})
+def get_categories():
+    questions = load_questions(DATA_CSV)
+    cats = sorted(set(q.category for q in questions))
+    return jsonify({"categories": cats})
 
 
 def _build_state(g, player):
