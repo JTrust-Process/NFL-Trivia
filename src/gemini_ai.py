@@ -23,7 +23,7 @@ import json
 import threading
 import pandas as pd
 
-GEMINI_MODEL = "gemini-1.5-pro"
+GEMINI_MODEL = "gemini-2.0-flash"   # used for all calls (fast + capable)
 DATA_CSV     = "data/nfl_trivia.csv"
 
 # ── Gemini client (lazy init) ─────────────────────────────────────────────────
@@ -33,21 +33,20 @@ def _get_client():
     global _client
     if _client is None:
         try:
-            import google.generativeai as genai
+            from google import genai
             api_key = os.environ.get("GEMINI_API_KEY")
             if not api_key:
                 raise RuntimeError("GEMINI_API_KEY environment variable not set")
-            genai.configure(api_key=api_key)
-            _client = genai.GenerativeModel(GEMINI_MODEL)
+            _client = genai.Client(api_key=api_key)
         except ImportError:
-            raise RuntimeError("google-generativeai not installed — run: pip install google-generativeai")
+            raise RuntimeError("google-genai not installed — run: pip install google-genai")
     return _client
 
 
 def _call_gemini(prompt: str) -> str:
     """Make a Gemini API call and return raw text response."""
-    model = _get_client()
-    response = model.generate_content(prompt)
+    client = _get_client()
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
     return response.text.strip()
 
 
@@ -337,18 +336,17 @@ _fact_last_called: dict = {}   # user_id -> timestamp
 _FACT_COOLDOWN = 20            # seconds between fun fact calls per user
 
 # Flash-speed model for live gameplay (faster than Pro)
-_FLASH_MODEL = "gemini-1.5-flash"
+_FLASH_MODEL = "gemini-2.0-flash"
 _flash_client = None
 
 def _get_flash_client():
     global _flash_client
     if _flash_client is None:
-        import google.generativeai as genai
+        from google import genai
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise RuntimeError("GEMINI_API_KEY not set")
-        genai.configure(api_key=api_key)
-        _flash_client = genai.GenerativeModel(_FLASH_MODEL)
+        _flash_client = genai.Client(api_key=api_key)
     return _flash_client
 
 
@@ -378,8 +376,8 @@ def get_fun_fact(question: str, correct_answer: str, category: str, user_id: int
             f"Be specific and surprising — not just a restatement of the answer. "
             f"Do not start with 'Did you know'. No emojis. Plain text only."
         )
-        model = _get_flash_client()
-        response = model.generate_content(prompt)
+        client = _get_flash_client()
+        response = client.models.generate_content(model=_FLASH_MODEL, contents=prompt)
         fact = response.text.strip().strip('"').strip("'")
         # Sanity check — reject if too long or empty
         if not fact or len(fact) > 200:
@@ -420,8 +418,8 @@ def get_explanation(question: str, correct_answer: str, category: str,
             f"Be specific, educational, and concise. "
             f"Do not restate the question. No emojis. Plain text only."
         )
-        model = _get_flash_client()
-        response = model.generate_content(prompt)
+        client = _get_flash_client()
+        response = client.models.generate_content(model=_FLASH_MODEL, contents=prompt)
         explanation = response.text.strip().strip('"').strip("'")
         if not explanation or len(explanation) > 300:
             return ""

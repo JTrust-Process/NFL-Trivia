@@ -330,6 +330,9 @@ def weekly_leaderboard():
              for r in rows]
     return render_template("leaderboard_weekly.html", board=board,
                            season=season, user=current_user)
+
+
+@app.route("/profile")
 @login_required
 def profile():
     sessions = (GameSession.query
