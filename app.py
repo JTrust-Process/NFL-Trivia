@@ -330,9 +330,6 @@ def weekly_leaderboard():
              for r in rows]
     return render_template("leaderboard_weekly.html", board=board,
                            season=season, user=current_user)
-
-
-@app.route("/profile")
 @login_required
 def profile():
     sessions = (GameSession.query
@@ -404,9 +401,16 @@ def start_game():
             if r.is_correct:
                 cat_correct[r.category] += 1
 
-    personalized_weights = get_personalized_weights(
-        dict(cat_counts), dict(cat_correct)
-    )
+    # Only call Gemini for personalized weights if player has 50+ answers
+    # across at least 3 categories — below that there's not enough signal
+    total_answers = sum(cat_counts.values())
+    enough_categories = sum(1 for v in cat_counts.values() if v >= 5)
+    if total_answers >= 50 and enough_categories >= 3:
+        personalized_weights = get_personalized_weights(
+            dict(cat_counts), dict(cat_correct)
+        )
+    else:
+        personalized_weights = {}
 
     session.clear()
     session["game"] = {
@@ -471,8 +475,14 @@ def get_question():
     g["q_start_time"] = time.time()
     session["game"] = g
 
-    # ── Feature 2: Check if pool is running low, generate more in background ──
-    auto_generate_questions(DATA_CSV, g["asked_ids"], current_user.id)
+    # Only trigger auto-generation if pool is genuinely low (seen 80%+ of questions)
+    # and we haven't generated in this session already
+    total_qs = len(questions)
+    seen_qs  = len(g["asked_ids"])
+    if total_qs > 0 and seen_qs / total_qs >= 0.80 and not g.get("auto_gen_fired"):
+        g["auto_gen_fired"] = True
+        session["game"] = g
+        auto_generate_questions(DATA_CSV, g["asked_ids"], current_user.id)
 
     choices = generate_choices(q, questions) if g["mode"] == "multiple_choice" else None
     return jsonify({
@@ -551,14 +561,19 @@ def submit_answer():
     streak_msg = ({3:"🔥 3 in a row!",5:"🔥🔥 5 streak!",7:"🔥🔥🔥 Unstoppable!"}.get(streak,"")
                   or ("🔥🔥🔥 Unstoppable!" if streak > 7 else ""))
 
-    # Fun fact — only on wrong answers, rate limited per user
+    # Fun fact — wrong answers only, and only every 3rd wrong answer per game
     fun_fact = ""
     if not is_correct:
-        fun_fact = get_fun_fact(q.question, q.answer, q.category, current_user.id)
+        wrong_count = sum(1 for r in g["records"] if not r["is_correct"])
+        if wrong_count % 3 == 0:
+            fun_fact = get_fun_fact(q.question, q.answer, q.category, current_user.id)
 
-    # Explanation — after every answer, rate limited per user
-    explanation = get_explanation(q.question, q.answer, q.category,
-                                  is_correct, current_user.id)
+    # Explanation — every 4th answer only to conserve quota
+    explanation = ""
+    total_answered = len(g["records"])
+    if total_answered % 4 == 0:
+        explanation = get_explanation(q.question, q.answer, q.category,
+                                      is_correct, current_user.id)
 
     return jsonify({
         "is_correct": is_correct, "feedback": feedback, "correct_answer": q.answer,
@@ -612,7 +627,11 @@ def save_results():
         print(f"[Season] Entry update failed: {e}")
     all_records = [{"question_id": r.question_id, "is_correct": r.is_correct,
                     "mu_before": r.mu_before} for r in QuestionRecord.query.all()]
-    retrained = smarter_difficulty_calibration(DATA_CSV, all_records)
+    # Only calibrate every 10 games to conserve Gemini quota
+    total_games = GameSession.query.count()
+    retrained = False
+    if total_games % 10 == 0 and total_games > 0:
+        retrained = smarter_difficulty_calibration(DATA_CSV, all_records)
 
     rows = (db.session.query(User.username,
                 db.func.max(GameSession.final_mu).label("best_mu"),
