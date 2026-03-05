@@ -115,3 +115,36 @@ class SeasonEntry(db.Model):
 
     def __repr__(self):
         return f"<SeasonEntry season={self.season_id} user={self.user_id}>"
+
+
+# ── Achievements ──────────────────────────────────────────────────────────────
+
+ACHIEVEMENTS = {
+    "first_win":        {"name": "First Win",        "icon": "🏆", "desc": "Complete your first game"},
+    "on_fire":          {"name": "On Fire",           "icon": "🔥", "desc": "Get a 5-question streak"},
+    "unstoppable":      {"name": "Unstoppable",       "icon": "⚡", "desc": "Get a 10-question streak"},
+    "sharp":            {"name": "Sharp",             "icon": "🎯", "desc": "90%+ accuracy in a single game"},
+    "grinder":          {"name": "Grinder",           "icon": "💪", "desc": "Play 10 games"},
+    "century":          {"name": "Century",           "icon": "💯", "desc": "Play 100 games"},
+    "category_master":  {"name": "Category Master",   "icon": "📚", "desc": "80%+ accuracy in any category (min 10 questions)"},
+    "high_iq":          {"name": "High IQ",           "icon": "🧠", "desc": "Reach a skill score of μ 3.0"},
+    "legend":           {"name": "Legend",            "icon": "👑", "desc": "Reach a skill score of μ 5.0"},
+}
+
+
+class UserAchievement(db.Model):
+    """Tracks which achievements each user has earned."""
+    __tablename__ = "user_achievements"
+
+    id           = db.Column(db.Integer, primary_key=True)
+    user_id      = db.Column(db.Integer, db.ForeignKey("users.id"),
+                             nullable=False, index=True)
+    achievement  = db.Column(db.String(40), nullable=False)
+    earned_at    = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User")
+
+    __table_args__ = (db.UniqueConstraint("user_id", "achievement"),)
+
+    def __repr__(self):
+        return f"<Achievement {self.achievement} user={self.user_id}>"
