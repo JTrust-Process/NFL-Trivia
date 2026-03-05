@@ -669,3 +669,19 @@ def make_admin():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)
+    
+@app.route("/db-reset")
+def db_reset():
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+    return "Done! All tables recreated. Now register and visit /make-me-admin/username"
+
+@app.route("/make-me-admin/<username>")
+def make_me_admin(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return f"User '{username}' not found — register first."
+    user.is_admin = True
+    db.session.commit()
+    return f"Done! {username} is now an admin. Delete these routes now."
