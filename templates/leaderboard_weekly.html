@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>This Week — 🏈 NFL Trivia</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#060a0f; --surface:#0d1520; --card:#111c2a; --border:#1e3048;
+    --gold:#f5c518; --text:#e8edf2; --muted:#5a7289; --accent:#3b82f6;
+    --green:#22c55e;
+  }
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'Barlow Condensed',sans-serif; min-height:100vh; }
+  body::before {
+    content:''; position:fixed; inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);
+    pointer-events:none; z-index:9999;
+  }
+  .wrapper { max-width:800px; margin:0 auto; padding:0 16px 60px; position:relative; z-index:1; }
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 0 16px; border-bottom:2px solid var(--gold); margin-bottom:32px;
+  }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:2.4rem; letter-spacing:3px; color:var(--gold); line-height:1; }
+  .logo span { color:var(--text); font-size:1rem; display:block; letter-spacing:6px; }
+  nav a { color:var(--muted); text-decoration:none; font-size:.85rem; letter-spacing:1px; text-transform:uppercase; margin-left:16px; }
+  nav a:hover { color:var(--gold); }
+
+  .week-badge {
+    display:inline-block; padding:4px 14px; border-radius:3px;
+    background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,.2);
+    color:var(--accent); font-size:.8rem; letter-spacing:1px; margin-bottom:20px;
+  }
+  h1 {
+    font-family:'Bebas Neue',sans-serif; font-size:3rem; letter-spacing:4px;
+    color:var(--gold); margin-bottom:8px;
+    text-shadow:0 0 40px rgba(245,197,24,.2);
+  }
+
+  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .lb-table { width:100%; border-collapse:collapse; }
+  .lb-table thead tr { border-bottom:2px solid var(--gold); }
+  .lb-table th {
+    font-size:.7rem; letter-spacing:2px; text-transform:uppercase;
+    color:var(--muted); padding:10px 16px; text-align:left; font-weight:600;
+  }
+  .lb-table tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+  .lb-table tbody tr:hover { background:rgba(245,197,24,.03); }
+  .lb-table td { padding:14px 16px; font-size:1.05rem; }
+  .rank { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--muted); width:48px; }
+  tr:nth-child(1) .rank { color:#ffd700; }
+  tr:nth-child(2) .rank { color:#c0c0c0; }
+  tr:nth-child(3) .rank { color:#cd7f32; }
+  .score-val { font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--gold); }
+  .acc-val { color:var(--green); font-weight:600; }
+
+  .empty { text-align:center; padding:60px 20px; color:var(--muted); font-size:1.1rem; letter-spacing:1px; }
+  .nav-row { display:flex; gap:10px; margin-top:28px; }
+  .nav-row a { flex:1; }
+  .btn {
+    display:block; text-align:center; padding:12px;
+    font-family:'Bebas Neue',sans-serif; font-size:1.1rem; letter-spacing:2px;
+    border-radius:4px; text-decoration:none; transition:all .2s;
+  }
+  .btn-gold { background:var(--gold); color:#000; }
+  .btn-gold:hover { background:#ffe45e; }
+  .btn-outline { border:1px solid var(--border); color:var(--muted); }
+  .btn-outline:hover { border-color:var(--muted); color:var(--text); }
+
+  @media(max-width:540px) {
+    h1 { font-size:2rem; }
+    .logo { font-size:1.6rem; }
+    .lb-table th:nth-child(4), .lb-table td:nth-child(4) { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="logo">NFL Trivia<span>Adaptive Edition</span></div>
+    <nav>
+      <a href="/">← Play</a>
+      <a href="/leaderboard">All-Time</a>
+    </nav>
+  </header>
+
+  <h1>📅 This Week</h1>
+  <div class="week-badge">
+    {{ season.week_start.strftime('%b %d') }} – {{ season.week_end.strftime('%b %d, %Y') }}
+  </div>
+
+  {% if board %}
+  <div class="table-wrap">
+  <table class="lb-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th>Best μ</th>
+        <th>Avg Accuracy</th>
+        <th>Games</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in board %}
+      <tr>
+        <td class="rank">
+          {% if loop.index == 1 %}🥇
+          {% elif loop.index == 2 %}🥈
+          {% elif loop.index == 3 %}🥉
+          {% else %}{{ loop.index }}
+          {% endif %}
+        </td>
+        <td><strong>{{ entry.username }}</strong></td>
+        <td><span class="score-val">{{ "%.2f"|format(entry.best_mu) }}</span></td>
+        <td><span class="acc-val">{{ entry.avg_accuracy }}%</span></td>
+        <td>{{ entry.games }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty">No games played this week yet — be the first!</div>
+  {% endif %}
+
+  <div class="nav-row">
+    <a href="/"><div class="btn btn-gold">Play Now</div></a>
+    <a href="/leaderboard"><div class="btn btn-outline">All-Time Leaderboard</div></a>
+  </div>
+</div>
+</body>
+</html>

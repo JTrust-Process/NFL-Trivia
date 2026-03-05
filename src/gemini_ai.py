@@ -388,3 +388,44 @@ def get_fun_fact(question: str, correct_answer: str, category: str, user_id: int
     except Exception as e:
         print(f"[Gemini] Fun fact skipped: {e}")
         return ""
+
+
+# ── Feature 5: Explanation After Every Answer ─────────────────────────────────
+
+_explanation_last_called: dict = {}
+_EXPLANATION_COOLDOWN = 15  # seconds between explanation calls per user
+
+def get_explanation(question: str, correct_answer: str, category: str,
+                    is_correct: bool, user_id: int) -> str:
+    """
+    Returns a short explanation of why the answer is correct.
+    Shown after every answer — correct or wrong.
+    Rate limited to once every 15 seconds per user.
+    Returns empty string if rate limited or on error.
+    """
+    now = time.time()
+    last = _explanation_last_called.get(f"exp_{user_id}", 0)
+    if now - last < _EXPLANATION_COOLDOWN:
+        return ""
+
+    _explanation_last_called[f"exp_{user_id}"] = now
+
+    try:
+        tone = "reinforce why this is correct" if is_correct else "explain why the correct answer is what it is"
+        prompt = (
+            f"NFL trivia question: {question}\n"
+            f"Correct answer: {correct_answer}\n"
+            f"Category: {category}\n\n"
+            f"In 1-2 sentences, {tone}. "
+            f"Be specific, educational, and concise. "
+            f"Do not restate the question. No emojis. Plain text only."
+        )
+        model = _get_flash_client()
+        response = model.generate_content(prompt)
+        explanation = response.text.strip().strip('"').strip("'")
+        if not explanation or len(explanation) > 300:
+            return ""
+        return explanation
+    except Exception as e:
+        print(f"[Gemini] Explanation skipped: {e}")
+        return ""

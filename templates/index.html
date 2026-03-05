@@ -297,7 +297,35 @@
     padding: 0 2px;
     animation: fadeIn .4s ease;
   }
-  .fun-fact.show { display: block; }
+
+  /* ── Explanation ── */
+  .explanation {
+    font-size: .92rem; color: var(--text); line-height: 1.45;
+    margin-top: 10px; padding: 10px 14px;
+    background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.15);
+    border-radius: 6px; display: none;
+    animation: fadeIn .4s ease;
+  }
+  .explanation.show { display: block; }
+  .explanation-label {
+    font-size: .65rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 4px; font-weight: 700;
+  }
+
+  /* ── Score card modal ── */
+  .scorecard-modal {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,.75); align-items: center; justify-content: center;
+  }
+  .scorecard-modal.show { display: flex; }
+  .scorecard-inner {
+    background: var(--card); border: 1px solid var(--border);
+    border-top: 3px solid var(--gold); border-radius: 10px;
+    padding: 24px; max-width: 420px; width: 90%;
+  }
+  .scorecard-inner canvas { display: block; width: 100%; border-radius: 6px; margin-bottom: 14px; }
+  .scorecard-btns { display: flex; gap: 10px; }
+  .scorecard-btns button { flex: 1; }
 
   /* ── Results screen ── */
   .result-hero {
@@ -552,6 +580,10 @@
     <div class="streak-banner" id="streak-banner"></div>
     <div class="feedback-banner" id="feedback-banner"></div>
     <div class="fun-fact" id="fun-fact"></div>
+    <div class="explanation" id="explanation">
+      <div class="explanation-label">📖 Did You Know</div>
+      <span id="explanation-text"></span>
+    </div>
     <div class="mu-delta" id="mu-delta"></div>
     <button class="btn-next" id="btn-next">NEXT QUESTION →</button>
   </div>
@@ -579,6 +611,21 @@
     <div class="play-again-row">
       <button class="btn-primary" id="btn-play-again">PLAY AGAIN</button>
       <a href="/leaderboard"><button class="btn-secondary">Full Leaderboard</button></a>
+    </div>
+    <div style="text-align:center; margin-top:12px;">
+      <button class="btn-secondary" id="btn-scorecard" style="margin-right:8px">📸 Share Score Card</button>
+      <a href="/leaderboard/weekly"><button class="btn-secondary">📅 This Week</button></a>
+    </div>
+  </div>
+
+  <!-- Score card modal -->
+  <div class="scorecard-modal" id="scorecard-modal">
+    <div class="scorecard-inner">
+      <canvas id="scorecard-canvas" width="800" height="440"></canvas>
+      <div class="scorecard-btns">
+        <button class="btn-primary" id="btn-download-card" style="margin-top:0;font-size:1rem">⬇ Download</button>
+        <button class="btn-secondary" id="btn-close-card">Close</button>
+      </div>
     </div>
   </div>
 
@@ -672,6 +719,8 @@ async function loadQuestion() {
   document.getElementById('feedback-banner').className = 'feedback-banner';
   document.getElementById('streak-banner').textContent = '';
   document.getElementById('fun-fact').textContent = '';
+  document.getElementById('explanation').classList.remove('show');
+  document.getElementById('explanation-text').textContent = '';
   document.getElementById('mu-delta').textContent = '';
   document.getElementById('hint-text').textContent = '';
   document.getElementById('answer-input').value = '';
@@ -809,6 +858,16 @@ async function submitAnswer(userAns, timedOut = false) {
     factEl.textContent = '';
   }
 
+  // Explanation (every answer, may be empty if rate limited)
+  const expEl = document.getElementById('explanation');
+  const expText = document.getElementById('explanation-text');
+  if (data.explanation) {
+    expText.textContent = data.explanation;
+    expEl.classList.add('show');
+  } else {
+    expEl.classList.remove('show');
+  }
+
   // MC highlight correct/wrong
   if (state.currentQ?.choices) {
     document.querySelectorAll('.choice-btn').forEach(btn => {
@@ -925,6 +984,7 @@ async function showResults() {
   `;
 
   showScreen('results');
+  _lastResults = data;
 }
 
 // ── Play again ─────────────────────────────────────────────────────────────
@@ -934,6 +994,100 @@ document.getElementById('btn-play-again').addEventListener('click', () => showSc
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(`screen-${name}`).classList.add('active');
+}
+
+// ── Score Card ─────────────────────────────────────────────────────────────
+let _lastResults = null;
+
+document.getElementById('btn-scorecard').addEventListener('click', () => {
+  if (_lastResults) drawScoreCard(_lastResults);
+  document.getElementById('scorecard-modal').classList.add('show');
+});
+
+document.getElementById('btn-close-card').addEventListener('click', () => {
+  document.getElementById('scorecard-modal').classList.remove('show');
+});
+
+document.getElementById('btn-download-card').addEventListener('click', () => {
+  const canvas = document.getElementById('scorecard-canvas');
+  const a = document.createElement('a');
+  a.download = 'nfl-trivia-score.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+});
+
+function drawScoreCard(data) {
+  const canvas = document.getElementById('scorecard-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 800, H = 440;
+  canvas.width = W; canvas.height = H;
+
+  // Background
+  ctx.fillStyle = '#060a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Gold top bar
+  ctx.fillStyle = '#f5c518';
+  ctx.fillRect(0, 0, W, 6);
+
+  // Subtle grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // NFL Trivia logo
+  ctx.font = 'bold 48px "Arial Black", Arial';
+  ctx.fillStyle = '#f5c518';
+  ctx.textAlign = 'left';
+  ctx.fillText('🏈 NFL TRIVIA', 48, 76);
+
+  ctx.font = '18px Arial';
+  ctx.fillStyle = '#5a7289';
+  ctx.fillText('ADAPTIVE EDITION', 60, 102);
+
+  // Player name
+  ctx.font = 'bold 28px Arial';
+  ctx.fillStyle = '#e8edf2';
+  ctx.fillText(data.p1.name, 48, 148);
+
+  // Divider
+  ctx.strokeStyle = '#1e3048';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(48, 164); ctx.lineTo(W - 48, 164); ctx.stroke();
+
+  // Stats
+  const stats = [
+    { label: 'FINAL μ',    value: data.p1.mu.toFixed(2),   color: '#f5c518' },
+    { label: 'ACCURACY',   value: data.p1.accuracy + '%',  color: '#22c55e' },
+    { label: 'BEST STREAK',value: String(data.p1.best_streak), color: '#e8edf2' },
+  ];
+  const colW = (W - 96) / 3;
+  stats.forEach((s, i) => {
+    const x = 48 + i * colW + colW / 2;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 52px "Arial Black", Arial';
+    ctx.fillStyle = s.color;
+    ctx.fillText(s.value, x, 250);
+    ctx.font = '13px Arial';
+    ctx.fillStyle = '#5a7289';
+    ctx.letterSpacing = '2px';
+    ctx.fillText(s.label, x, 276);
+  });
+
+  // Bottom CTA
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 20px Arial';
+  ctx.fillStyle = '#e8edf2';
+  ctx.fillText('Can you beat me?', 48, 340);
+
+  ctx.font = '16px Arial';
+  ctx.fillStyle = '#f5c518';
+  ctx.fillText('nfl-trivia-32y5.onrender.com', 48, 368);
+
+  // Gold bottom accent
+  ctx.fillStyle = '#f5c518';
+  ctx.fillRect(0, H - 4, W, 4);
 }
 
 

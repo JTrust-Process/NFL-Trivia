@@ -9,7 +9,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
-from src.models import db, User, GameSession, QuestionRecord
+from src.models import db, User, GameSession, QuestionRecord, Season, SeasonEntry
 from src.trivia import (
     load_questions, choose_next, update_skill, check_answer,
     generate_choices, SessionState,
@@ -19,6 +19,7 @@ from src.gemini_ai import (
     auto_generate_questions,
     get_personalized_weights,
     get_fun_fact,
+    get_explanation,
 )
 
 from dotenv import load_dotenv
@@ -86,6 +87,24 @@ def load_user(user_id):
 def init_db():
     with app.app_context():
         db.create_all()
+
+
+def get_or_create_season():
+    """Get the current active season, or create a new one for this week."""
+    from datetime import date, timedelta
+    today = date.today()
+    # Week starts Monday
+    week_start = today - timedelta(days=today.weekday())
+    week_end   = week_start + timedelta(days=6)
+
+    season = Season.query.filter_by(week_start=week_start).first()
+    if not season:
+        # Close out any previously active seasons
+        Season.query.filter_by(is_active=True).update({"is_active": False})
+        season = Season(week_start=week_start, week_end=week_end, is_active=True)
+        db.session.add(season)
+        db.session.commit()
+    return season
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -229,7 +248,25 @@ def leaderboard_page():
     return render_template("leaderboard.html", board=board, user=current_user)
 
 
-@app.route("/profile")
+@app.route("/leaderboard/weekly")
+@login_required
+def weekly_leaderboard():
+    season = get_or_create_season()
+    rows = (db.session.query(
+                User.username,
+                SeasonEntry.best_mu,
+                SeasonEntry.games,
+                SeasonEntry.accuracy,
+            )
+            .join(SeasonEntry, SeasonEntry.user_id == User.id)
+            .filter(SeasonEntry.season_id == season.id)
+            .order_by(db.desc(SeasonEntry.best_mu))
+            .limit(20).all())
+    board = [{"username": r.username, "best_mu": round(r.best_mu, 2),
+              "games": r.games, "avg_accuracy": round(r.accuracy * 100, 1)}
+             for r in rows]
+    return render_template("leaderboard_weekly.html", board=board,
+                           season=season, user=current_user)
 @login_required
 def profile():
     sessions = (GameSession.query
@@ -423,9 +460,14 @@ def submit_answer():
     if not is_correct:
         fun_fact = get_fun_fact(q.question, q.answer, q.category, current_user.id)
 
+    # Explanation — after every answer, rate limited per user
+    explanation = get_explanation(q.question, q.answer, q.category,
+                                  is_correct, current_user.id)
+
     return jsonify({
         "is_correct": is_correct, "feedback": feedback, "correct_answer": q.answer,
         "fun_fact": fun_fact,
+        "explanation": explanation,
         "mu_before": round(prev_mu, 2), "mu_after": round(new_mu, 2),
         "delta": round(new_mu - prev_mu, 3), "streak": streak, "streak_msg": streak_msg,
         "multiplier": round(g[f"p{player}_streak_multiplier"], 2),
@@ -457,7 +499,21 @@ def save_results():
             mu_after=r["mu_after"], hint_used=r["hint_used"], player=r["player"]))
     db.session.commit()
 
-    # ── Feature 1: Smarter difficulty calibration via Gemini ──────────────────
+    # ── Update season entry ───────────────────────────────────────────────────
+    try:
+        season = get_or_create_season()
+        entry  = SeasonEntry.query.filter_by(
+            season_id=season.id, user_id=current_user.id).first()
+        if not entry:
+            entry = SeasonEntry(season_id=season.id, user_id=current_user.id)
+            db.session.add(entry)
+        entry.best_mu  = max(entry.best_mu, g["p1_mu"])
+        entry.games   += 1
+        # Running average accuracy
+        entry.accuracy = ((entry.accuracy * (entry.games - 1)) + p1_acc) / entry.games
+        db.session.commit()
+    except Exception as e:
+        print(f"[Season] Entry update failed: {e}")
     all_records = [{"question_id": r.question_id, "is_correct": r.is_correct,
                     "mu_before": r.mu_before} for r in QuestionRecord.query.all()]
     retrained = smarter_difficulty_calibration(DATA_CSV, all_records)
@@ -613,3 +669,8 @@ def make_admin():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)
+    
+@app.route("/db-migrate")
+def db_migrate():
+    db.create_all()  # safe — only creates missing tables, won't drop existing ones
+    return "Done!"

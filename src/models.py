@@ -77,3 +77,41 @@ class QuestionRecord(db.Model):
 
     def __repr__(self):
         return f"<QRecord q={self.question_id} correct={self.is_correct}>"
+
+class Season(db.Model):
+    """A weekly leaderboard season. One row per week."""
+    __tablename__ = "seasons"
+
+    id         = db.Column(db.Integer, primary_key=True)
+    week_start = db.Column(db.Date, nullable=False, unique=True, index=True)
+    week_end   = db.Column(db.Date, nullable=False)
+    is_active  = db.Column(db.Boolean, default=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    entries = db.relationship("SeasonEntry", back_populates="season",
+                              cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<Season {self.week_start} → {self.week_end}>"
+
+
+class SeasonEntry(db.Model):
+    """Best score per user per season."""
+    __tablename__ = "season_entries"
+
+    id        = db.Column(db.Integer, primary_key=True)
+    season_id = db.Column(db.Integer, db.ForeignKey("seasons.id"),
+                          nullable=False, index=True)
+    user_id   = db.Column(db.Integer, db.ForeignKey("users.id"),
+                          nullable=False, index=True)
+    best_mu   = db.Column(db.Float, nullable=False, default=0.0)
+    games     = db.Column(db.Integer, default=0)
+    accuracy  = db.Column(db.Float, default=0.0)   # cumulative avg 0.0-1.0
+
+    season = db.relationship("Season", back_populates="entries")
+    user   = db.relationship("User")
+
+    __table_args__ = (db.UniqueConstraint("season_id", "user_id"),)
+
+    def __repr__(self):
+        return f"<SeasonEntry season={self.season_id} user={self.user_id}>"
