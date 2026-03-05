@@ -9,7 +9,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_mail import Mail, Message
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
-from src.models import db, User, GameSession, QuestionRecord, Season, SeasonEntry
+from src.models import db, User, GameSession, QuestionRecord, Season, SeasonEntry, UserAchievement, ACHIEVEMENTS
 from src.trivia import (
     load_questions, choose_next, update_skill, check_answer,
     generate_choices, SessionState,
@@ -105,6 +105,69 @@ def get_or_create_season():
         db.session.add(season)
         db.session.commit()
     return season
+
+
+def check_and_award_achievements(user_id, game_session, all_sessions, cat_records):
+    """
+    Checks all achievement conditions after a game ends.
+    Returns list of newly earned achievement keys.
+    """
+    already_earned = {a.achievement for a in
+                      UserAchievement.query.filter_by(user_id=user_id).all()}
+    new_achievements = []
+
+    def award(key):
+        if key not in already_earned:
+            db.session.add(UserAchievement(user_id=user_id, achievement=key))
+            new_achievements.append(key)
+            already_earned.add(key)
+
+    total_games  = len(all_sessions)
+    best_mu      = max((s.final_mu for s in all_sessions), default=0)
+    best_streak  = max((s.best_streak for s in all_sessions), default=0)
+
+    # First Win
+    if total_games >= 1:
+        award("first_win")
+
+    # Streak badges
+    if best_streak >= 5:
+        award("on_fire")
+    if best_streak >= 10:
+        award("unstoppable")
+
+    # Sharp — 90%+ accuracy in this game
+    if game_session.accuracy >= 0.90:
+        award("sharp")
+
+    # Grinder / Century
+    if total_games >= 10:
+        award("grinder")
+    if total_games >= 100:
+        award("century")
+
+    # μ milestones
+    if best_mu >= 3.0:
+        award("high_iq")
+    if best_mu >= 5.0:
+        award("legend")
+
+    # Category Master — 80%+ in any category with 10+ questions
+    cat_totals  = defaultdict(int)
+    cat_correct = defaultdict(int)
+    for r in cat_records:
+        cat_totals[r.category]  += 1
+        if r.is_correct:
+            cat_correct[r.category] += 1
+    for cat, total in cat_totals.items():
+        if total >= 10 and cat_correct[cat] / total >= 0.80:
+            award("category_master")
+            break
+
+    if new_achievements:
+        db.session.commit()
+
+    return new_achievements
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
@@ -284,8 +347,28 @@ def profile():
                  "correct": v["correct"], "total": v["total"]}
                 for c, v in sorted(cat_stats.items(), key=lambda x: -x[1]["correct"])
                 if v["total"] > 0]
+
+    # Achievements
+    earned = {a.achievement: a.earned_at for a in
+              UserAchievement.query.filter_by(user_id=current_user.id).all()}
+    earned_achievements = [
+        {"key": k, **ACHIEVEMENTS[k], "earned_at": earned.get(k),
+         "unlocked": k in earned}
+        for k in ACHIEVEMENTS
+    ]
+
+    # μ history for career graph (last 20 games, chronological)
+    history_sessions = (GameSession.query
+                        .filter_by(user_id=current_user.id)
+                        .order_by(GameSession.played_at.asc())
+                        .limit(20).all())
+    mu_history = [{"mu": round(s.final_mu, 2),
+                   "date": s.played_at.strftime("%b %d")} for s in history_sessions]
     return render_template("profile.html", user=current_user,
-                           sessions=sessions, cat_data=cat_data)
+                           sessions=sessions, cat_data=cat_data,
+                           achievements=earned_achievements,
+                           all_achievements=ACHIEVEMENTS,
+                           mu_history=mu_history)
 
 
 # ── Game API ──────────────────────────────────────────────────────────────────
@@ -330,6 +413,7 @@ def start_game():
         "multiplayer": data.get("multiplayer", False),
         "daily": daily,
         "category": cat,
+        "difficulty": data.get("difficulty", "all"),
         "current_round": 0, "asked_ids": [], "records": [], "hint_used": False,
         "q_start_time": None,
         "personalized_weights": personalized_weights,
@@ -360,6 +444,15 @@ def get_question():
     cat = g.get("category", "all")
     if cat and cat != "all":
         questions = [q for q in questions if q.category == cat]
+
+    # Filter by difficulty if set
+    diff = g.get("difficulty", "all")
+    if diff and diff != "all":
+        try:
+            diff_val = int(diff)
+            questions = [q for q in questions if round(q.difficulty) == diff_val]
+        except ValueError:
+            pass
 
     player = g["active_player"]
     state  = _build_state(g, player)
@@ -545,10 +638,20 @@ def save_results():
         p2_acc = sum(r["is_correct"] for r in p2_records) / len(p2_records) if p2_records else 0
         p2_result = {"name": g["p2_name"], "mu": round(g["p2_mu"], 2),
                      "accuracy": round(p2_acc * 100, 1)}
+
+    # ── Check achievements ────────────────────────────────────────────────────
+    all_sessions = GameSession.query.filter_by(user_id=current_user.id).all()
+    all_cat_records = QuestionRecord.query.join(GameSession).filter(
+        GameSession.user_id == current_user.id).all()
+    new_badges = check_and_award_achievements(
+        current_user.id, gs, all_sessions, all_cat_records)
+    new_badges_data = [{"key": k, **ACHIEVEMENTS[k]} for k in new_badges]
+
     return jsonify({"winner": winner, "retrained": retrained,
                     "p1": {"name": g["p1_name"], "mu": round(g["p1_mu"], 2),
                            "accuracy": round(p1_acc * 100, 1), "best_streak": g["p1_best_streak"]},
-                    "p2": p2_result, "categories": cats, "leaderboard": leaderboard})
+                    "p2": p2_result, "categories": cats, "leaderboard": leaderboard,
+                    "new_badges": new_badges_data})
 
 
 @app.route("/api/categories", methods=["GET"])
@@ -557,6 +660,49 @@ def get_categories():
     questions = get_questions()
     cats = sorted(set(q.category for q in questions))
     return jsonify({"categories": cats})
+
+
+@app.route("/submit-question", methods=["GET", "POST"])
+@login_required
+def submit_question():
+    if request.method == "POST":
+        question = request.form.get("question", "").strip()
+        answer   = request.form.get("answer", "").strip()
+        category = request.form.get("category", "").strip()
+        hint     = request.form.get("hint", "").strip()
+        try:
+            diff = float(request.form.get("difficulty", 2.5))
+            diff = round(max(1.0, min(5.0, diff)), 1)
+        except ValueError:
+            diff = 2.5
+
+        if not question or not answer or not category:
+            flash("Question, answer and category are required.", "error")
+            return redirect(url_for("submit_question"))
+
+        try:
+            df = pd.read_csv(DATA_CSV)
+            if "status" not in df.columns:
+                df["status"] = "approved"
+            if "source" not in df.columns:
+                df["source"] = "manual"
+            new_id = int(df["id"].max()) + 1 if len(df) else 1
+            new_row = {
+                "id": new_id, "question": question, "answer": answer,
+                "difficulty": diff, "category": category,
+                "hint": hint, "status": "pending", "source": "player",
+            }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            df.to_csv(DATA_CSV, index=False)
+            global _cache_mtime
+            _cache_mtime = 0.0
+            flash("Thanks! Your question has been submitted for review.", "success")
+        except Exception as e:
+            print(f"[Submit] Error: {e}")
+            flash("Something went wrong. Please try again.", "error")
+
+        return redirect(url_for("submit_question"))
+    return render_template("submit_question.html", user=current_user)
 
 
 def _build_state(g, player):
@@ -669,3 +815,21 @@ def make_admin():
 if __name__ == "__main__":
     init_db()
     app.run(debug=True, port=5000)
+
+
+# ── TEMPORARY BOOTSTRAP — DELETE AFTER USE ────────────────────────────────────
+@app.route("/db-reset")
+def db_reset():
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+    return "Done! All tables recreated. Now register and visit /make-me-admin/username"
+
+@app.route("/make-me-admin/<username>")
+def make_me_admin(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return f"User '{username}' not found — register first."
+    user.is_admin = True
+    db.session.commit()
+    return f"Done! {username} is now an admin. Delete these routes now."
