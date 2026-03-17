@@ -33,6 +33,12 @@ if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,   # test connection before use — drops dead ones instantly
+    "pool_recycle": 280,     # recycle before Render's 5-min idle kill
+    "pool_size": 5,
+    "max_overflow": 2,
+}
 
 db.init_app(app)
 
@@ -81,7 +87,11 @@ def get_questions() -> list:
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception:
+        db.session.remove()
+        return None
 
 
 def init_db():
@@ -330,6 +340,9 @@ def weekly_leaderboard():
              for r in rows]
     return render_template("leaderboard_weekly.html", board=board,
                            season=season, user=current_user)
+
+
+@app.route("/profile")
 @login_required
 def profile():
     sessions = (GameSession.query
